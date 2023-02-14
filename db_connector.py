@@ -37,6 +37,16 @@ class Database():
             return cursor.rowcount
         except Error as e:
             raise e
+
+
+    def execute_one(self,query,record):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(query,record)
+            self.connection.commit()
+            return cursor.rowcount
+        except Error as e:
+            raise e
         
     def query(self,query):
         try:

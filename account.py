@@ -9,7 +9,7 @@ import enum
 import websocket
 from zerodha_login import ZerodhaConnect, ZerodhaConnectV2
 from hashlib import sha256
-
+from zerodha_db import ZerodhaInstruments
 
 class Account(object):
 
@@ -60,7 +60,7 @@ class Account(object):
         # self.WSOBJECTCONTAINER = AngelOrderWS()
         self.WSOBJECTCONTAINER = AngelOrderWSV1()
         self.WSOBJECTCONTAINER.setDaemon(True)
-        self.WSOBJECTCONTAINER.start()
+        # self.WSOBJECTCONTAINER.start()
         
 
     def __str__(self):
@@ -75,6 +75,9 @@ class Account(object):
 
     def status(self):
         return (self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.authStatus)
+
+    def tuple_val(self):
+        return tuple((self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.broker))
 
     def is_valid(self):
         if self.client_id == None:
@@ -110,14 +113,20 @@ class Account(object):
         retries = 0
         success = False
         while not success and retries < 3:
-            authkey = pyotp.TOTP(self.totp_key)
+            try:
+                authkey = pyotp.TOTP(self.totp_key)
+                payload = {
+                    'clientcode': self.client_id,
+                    'password': self.password,
+                    'totp': authkey.now()
+                }
+            except Exception as e:
+                print(e)
+                retries += 1
+
 
             # payload = "{\n\"clientcode\":\"CLIENT_ID\",\n\"password\":\"CLIENT_PASSWORD\"\n,\n\"totp\":\"TOTP_CODE\"\n}"
-            payload = {
-                'clientcode': self.client_id,
-                'password': self.password,
-                'totp': authkey.now()
-            }
+            
             json_data = json.dumps(payload)
             """ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
@@ -214,9 +223,9 @@ class Account(object):
                             return
                     else:
                         retries = 5
-                except ValueError:
+                except Exception as e:
                     print("Couldn't parse the JSON response received from the server: {content}".format(
-                        content=res))
+                        content=res),e)
                     retries += 1
         else:
             self.authStatus = 'Login Error'
@@ -308,6 +317,10 @@ class Account(object):
         print(self.accountInfo)
 
     def convert_order(self, orderObject):
+        var_zerodha_db = ZerodhaInstruments()
+        var_zerodha_db.get_specific_instruments_data(orderObject['tradingsymbol'])
+        if len(var_zerodha_db) != 0:
+            print(var_zerodha_db)
         variety_converter = {
             'NORMAL': 'regular',
             'AMO': 'amo',
@@ -428,8 +441,8 @@ class Account(object):
                     # print(res.status, data.decode("utf-8"))
                     success = True
                     return
-                except:
-                    print("Error occured")
+                except Exception as e:
+                    print("Error occured",e)
                     retries += 1
         if self.authStatus == 'Logged In' and self.broker != 'zerodha':
             retries = 0
@@ -449,10 +462,10 @@ class Account(object):
                     print(res.status, data.decode("utf-8"))
                     success = True
                     return
-                except:
-                    print("Error occured")
+                except Exception as e:
+                    print("Error occured",e)
                     retries += 1
-        self.WSOBJECTCONTAINER.close()   
+        # self.WSOBJECTCONTAINER.close()   
 
     def get_auth_status(self):
         return self.authStatus
