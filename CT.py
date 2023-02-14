@@ -181,16 +181,24 @@ class CopyTraderGUI(Frame):
         win.pack_propagate(0)
         win.title('Order')
         win.config()
-        accountFrame = LabelFrame(
+        accountSettingsFrame = LabelFrame(
             win, text='Selected Accounts', height=300, width=200, padx=2)
-        accountFrame.pack(side=RIGHT, fill=Y)
+        accountSettingsFrame.pack(side=RIGHT, fill=Y)
         account_orderplacement_panel = {}
+        account_risk_panel = {}
         for acc in self.listOfAccounts:
+            account_frame = LabelFrame(accountSettingsFrame, text=acc.client_id)
+            account_frame.pack(side=TOP, fill=X)
             account_orderplacement_panel[acc.client_id] = BooleanVar()
+            account_risk_panel[acc.client_id] = BooleanVar()
             local_checkbox = Checkbutton(
-                accountFrame, text=acc.client_id, var=account_orderplacement_panel[acc.client_id], command=print)
-            local_checkbox.pack(side=TOP, fill=X, anchor=W)
+                account_frame, text='Active', var=account_orderplacement_panel[acc.client_id], command=print)
+            local_checkbox.pack(side=LEFT)
             local_checkbox.select()
+            local_risk_checkbox = Checkbutton(
+                account_frame, text='Manage Risk', var=account_risk_panel[acc.client_id], command=print)
+            local_risk_checkbox.pack(side=LEFT)
+            local_risk_checkbox.select()
 
         Isearch = Frame(win, height=300, width=400, pady=2)
         labI = Label(Isearch, width=15, text='Search Instrument')
@@ -230,6 +238,28 @@ class CopyTraderGUI(Frame):
         selectedInstrument.pack(side=TOP)
         labP.pack(side=LEFT)
         self.selectedInstrument.pack(side=LEFT, expand=YES)
+
+
+
+        """ self.account_level_risk_checkbox = BooleanVar()
+
+
+        risk_panel = LabelFrame(win, height=300, width=400, text='Exchange')
+        exchange.pack(side=TOP, fill=X)
+        radio1 = Checkbutton(exchange, text='BSE Equity', command=(
+            lambda: self.orderType()), variable=(self.exchange), value='BSE')
+        radio1.pack(side=LEFT)
+        radio2 = Radiobutton(exchange, text='NSE Equity', command=(
+            lambda: self.orderType()), variable=(self.exchange), value='NSE')
+        radio2.pack(side=LEFT)
+        radio3 = Radiobutton(exchange, text='NSE Future and Options', command=(
+            lambda: self.orderType()), variable=(self.exchange), value='NFO')
+        radio3.pack(side=LEFT) """
+
+
+
+
+
         exchange = LabelFrame(win, height=300, width=400, text='Exchange')
         exchange.pack(side=TOP, fill=X)
         radio1 = Radiobutton(exchange, text='BSE Equity', command=(
@@ -678,13 +708,13 @@ class CopyTraderGUI(Frame):
         # self.prog_bar.remove_bar()
         pass
     def add_risk_rules(self):
-        win = Toplevel(self,padx=20,height=600,width=500,
+        win = Toplevel(self,padx=20,height=500,width=350,
                        pady=20)
         win.pack_propagate(0)
         win.title('Account Risk Rules')
         win.config()
-        risk_matrix = LabelFrame(win, text='Account risk x Order risk matrix', pady=20,padx=10,width=250)
-        Label(risk_matrix, text='Low <------ Order risk ------> High', pady=20,padx=10,width=250).pack(side=TOP,fill=X)
+        risk_matrix = LabelFrame(win, text='Account risk x Order risk matrix', pady=5,padx=10,width=250)
+        Label(risk_matrix, text='Low <------ Accounts ------> High', pady=20,padx=10,width=250).pack(side=TOP,fill=X)
         text_var = []
         entries = []
         label_frames = []
@@ -694,8 +724,9 @@ class CopyTraderGUI(Frame):
             # so you can append to those later
             text_var.append([])
             entries.append([])
-            label_frames.append(LabelFrame(risk_matrix, text='High Risk accounts', pady=5))
+            label_frames.append(LabelFrame(risk_matrix, text=self.return_risk_label(i), pady=5,padx=5))
             label_frames[i].pack(side=TOP)
+            Label(label_frames[i], text='Low').pack(side=LEFT)
             for j in range(cols):
                 # append your StringVar and Entry
                 text_var[i].append(StringVar())
@@ -703,16 +734,36 @@ class CopyTraderGUI(Frame):
                 # entries[i][j].place(x=20 + x2, y=20 + y2)
                 print(i,j)
                 entries[i][j].pack(side=LEFT,anchor=self.return_anchor(i,j))
+            Label(label_frames[i], text='High').pack(side=LEFT)
 
        
         # button= Button(risk_matrix,text="Submit", bg='bisque3', width=15, 
         # command=(lambda : self.get_mat(text_var=text_var)))
         # button.place(x=160,y=140)
-
         risk_matrix.pack(side=TOP,fill=X)
-    
-    
-  
+        risk_account_var = []
+        risk_account = LabelFrame(win, text='Independent account level risk settings', pady=5,padx=10,width=120)
+        for i in range(3):
+            risk_account_var.append(StringVar())
+            Entry(risk_account, textvariable=risk_account_var[i],width=10).pack(side=LEFT,anchor=W)
+        risk_account.pack(side=TOP,fill=X)
+        risk_order_var = []
+        risk_order = LabelFrame(win, text='Independent order level risk settings', pady=5,padx=10,width=120)
+        for i in range(3):
+            risk_order_var.append(StringVar())
+            Entry(risk_order, textvariable=risk_order_var[i],width=10).pack(side=LEFT,anchor=W)
+        risk_order.pack(side=TOP,fill=X)
+        button= Button(win,text="Save",width=15, 
+        command=(lambda : self.get_mat(text_var=text_var)))
+        button.pack(side=BOTTOM)
+
+    def return_risk_label(self,i):
+        if i == 0:
+            return 'High Risk orders'
+        elif i == 1:
+            return 'Medium Risk orders'
+        elif i == 2:
+            return 'Low Risk orders'
     def return_anchor(self,i,j):
         anchor = ''
         if i == 0:
@@ -744,7 +795,7 @@ class CopyTraderGUI(Frame):
             for j in range(cols):
                 matrix[i].append(text_var[i][j].get())
         print(matrix)
-        
+
     def addAccountScreen(self):
         self.is_single_accountValid = False
         self.broker = StringVar()
