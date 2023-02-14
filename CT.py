@@ -51,6 +51,7 @@ class CopyTraderGUI(Frame):
         self.instruments = []
         self.listOfAccounts = []
         self.listOfXLSXAccounts = []
+        self.account_risk_vars = ['Low', 'Medium', 'High']
         if self.check_internet_basic():
             self.load_accounts_from_db()
             self.makeWidgets()
@@ -88,6 +89,7 @@ class CopyTraderGUI(Frame):
             return False
         except Exception as e:
             print(e)
+            return False
 
     def makeWidgets(self):
 
@@ -97,18 +99,22 @@ class CopyTraderGUI(Frame):
         self.menu = Menu(self)
         account = Menu(self.menu)
         account.add_command(label='Add Account',
-                            command=(self.addAccountScreen))
-        account.add_command(label='Add Rules', command=())
+                            command=self.addAccountScreen)
+        account.add_command(label='Add Risk Rules', command=self.add_risk_rules)
         self.menu.add_cascade(label='Account', menu=account)
         order = Menu(self.menu)
-        order.add_command(label='Place Order', command=(self.placeOrder))
-        order.add_command(label='View Order', command=(self.loadOrderScreen))
+        order.add_command(label='Place Order', command=self.placeOrder)
+        order.add_command(label='View Order', command=self.loadOrderScreen)
         self.menu.add_cascade(label='Order', menu=order)
-        self.menu.add_command(label='Quit', command=(self.onQuit))
-        self.master.configure(menu=(self.menu))
+        self.menu.add_command(label='Quit', command=self.onQuit)
+        self.master.configure(menu=self.menu)
 
     def fetch(self):
         print('Input => "%s"' + self.clientcode.get())  # get text
+
+    
+
+
 
     def loginTest(self):
 
@@ -181,8 +187,8 @@ class CopyTraderGUI(Frame):
         account_orderplacement_panel = {}
         for acc in self.listOfAccounts:
             account_orderplacement_panel[acc.client_id] = BooleanVar()
-            local_checkbox = Checkbutton(accountFrame, text=(acc.client_id), var=(
-                account_orderplacement_panel[acc.client_id]), command=print)
+            local_checkbox = Checkbutton(
+                accountFrame, text=acc.client_id, var=account_orderplacement_panel[acc.client_id], command=print)
             local_checkbox.pack(side=TOP, fill=X, anchor=W)
             local_checkbox.select()
 
@@ -190,7 +196,7 @@ class CopyTraderGUI(Frame):
         labI = Label(Isearch, width=15, text='Search Instrument')
         self.searchInstrumentItem = Entry(Isearch, width=40)
         self.searchInstrumentItem.bind(
-            '<KeyRelease>', lambda event: self.searchInstruments())
+            '<KeyRelease>', self.searchInstruments)
         Isearch.pack(side=TOP)
         labI.pack(side=LEFT)
         self.searchInstrumentItem.pack(side=LEFT,
@@ -215,7 +221,7 @@ class CopyTraderGUI(Frame):
                 self.listBoxOfInstruments.insert(END, instrument[1])
 
         self.listBoxOfInstruments.bind(
-            '<ButtonRelease-1>', (lambda event: self.searchInstruments()))
+            '<ButtonRelease-1>', self.selectInstrument)
         selectedInstrument = Frame(win, height=300, width=400, pady=2)
         labP = Label(selectedInstrument, width=20,
                      text='Selected Instrument')
@@ -402,34 +408,36 @@ class CopyTraderGUI(Frame):
     def executeOrder(self, accounts_object):
         for e in accounts_object.values():
             print(e.get(), 'iteration')
-        else:
-            index = self.listBoxOfInstruments.curselection()
-            label = self.listBoxOfInstruments.get(index)
-            instrument = ''
-            for item in [k for k in self.instrumentsData if label == k[1]]:
-                print(item, '405')
-                instrument = item
 
-            print('Order :\n  variety = {0}\n  transactiontype = {1}\n  ordertype = {2}\n  producttype = {3} \n  duration = {4} \n  exchange = {5} \n  price = {6} \n  quantity = {7} \n  selected Instrument = {8} \n  symboltoken = {9} \n  tradingsymbol = {10} \n'.format(
-                self.variety.get(), self.transactiontype.get(), self.ordertype.get(), self.producttype.get(), self.duration.get(), self.exchange.get(), self.entP.get(), self.entM.get(), instrument[2], instrument[1], instrument[0]))
-            orderObject = {'variety': self.variety.get(),
-                           'tradingsymbol': instrument[1],
-                           'symboltoken': instrument[0],
-                           'transactiontype': self.transactiontype.get(),
-                           'exchange': self.exchange.get(),
-                           'ordertype': self.ordertype.get(),
-                           'producttype': self.producttype.get(),
-                           'duration': self.duration.get(),
-                           'price': self.entP.get(),
-                           'squareoff': '0',
-                           'stoploss': '0',
-                           'quantity': self.entM.get()}
-            print(orderObject)
-            for acc in self.listOfAccounts:
-                if accounts_object.get(acc.client_id) != 'None' and accounts_object.get(acc.client_id).get() == True:
-                    print(acc.client_id)
-                    if acc.get_auth_status() == 'Logged In':
-                        acc.place_order(orderObject)
+        index = self.listBoxOfInstruments.curselection()
+        label = self.listBoxOfInstruments.get(index)
+        instrument = ''
+        for item in [k for k in self.instrumentsData if label == k[1]]:
+            print(item, '405')
+            instrument = item
+
+        print('Order :\n  variety = {0}\n  transactiontype = {1}\n  ordertype = {2}\n  producttype = {3} \n  duration = {4} \n  exchange = {5} \n  price = {6} \n  quantity = {7} \n  selected Instrument = {8} \n  symboltoken = {9} \n  tradingsymbol = {10} \n'.format(
+            self.variety.get(), self.transactiontype.get(), self.ordertype.get(), self.producttype.get(), self.duration.get(), self.exchange.get(), self.entP.get(), self.entM.get(), instrument[2], instrument[1], instrument[0]))
+        orderObject = {
+            'variety': self.variety.get(),
+            'tradingsymbol': instrument[1],
+            'symboltoken': instrument[0],
+            'transactiontype': self.transactiontype.get(),
+            'exchange': self.exchange.get(),
+            'ordertype': self.ordertype.get(),
+            'producttype': self.producttype.get(),
+            'duration': self.duration.get(),
+            'price': self.entP.get(),
+            'squareoff': '0',
+            'stoploss': '0',
+            'quantity': self.entM.get()
+        }
+        print(orderObject)
+        for acc in self.listOfAccounts:
+            if accounts_object.get(acc.client_id) != 'None' and accounts_object.get(acc.client_id).get() == True:
+                print(acc.client_id)
+                if acc.get_auth_status() == 'Logged In':
+                    acc.place_order(orderObject)
 
     def searchInstruments(self):
         # print(self.searchInstrumentItem.get())
@@ -468,27 +476,23 @@ class CopyTraderGUI(Frame):
 
     def loadAccounts(self):
         name = '/home/jayant/Desktop/Accounts.xlsx'
-        print(name)
+        print(name, '472')
         if name:
             wb = load_workbook(name)
             ws = wb[wb.sheetnames[0]]
             for idx, row in enumerate(ws.rows):
                 if idx != 0:
                     values = []
-
-            for cell in row:
-                print(cell.value)
-                values.append(cell.value)
-            else:
-                print(values)
-                self.listOfXLSXAccounts.append(values)
-                acc = Account(*values)
-                if acc.is_valid():
-                    self.listOfAccounts.append(acc)
-                    self.account_db.insert_account_single_entry(
-                        acc.tuple_val())
-                wb.close()
-                self.initiate_login()
+                    for cell in row:
+                        values.append(cell.value)
+                    self.listOfXLSXAccounts.append(values)
+                    acc = Account(*values)
+                    if acc.is_valid():
+                        self.listOfAccounts.append(acc)
+                        self.account_db.insert_account_single_entry(
+                            acc.tuple_val())
+            wb.close()
+            self.initiate_login()
 
     def load_accounts_from_db(self):
         self.account_db = Account_DB()
@@ -673,18 +677,85 @@ class CopyTraderGUI(Frame):
         # self.prog_bar.stop_progress()
         # self.prog_bar.remove_bar()
         pass
+    def add_risk_rules(self):
+        win = Toplevel(self,padx=20,height=600,width=500,
+                       pady=20)
+        win.pack_propagate(0)
+        win.title('Account Risk Rules')
+        win.config()
+        risk_matrix = LabelFrame(win, text='Account risk x Order risk matrix', pady=20,padx=10,width=250)
+        Label(risk_matrix, text='Low <------ Order risk ------> High', pady=20,padx=10,width=250).pack(side=TOP,fill=X)
+        text_var = []
+        entries = []
+        label_frames = []
+        rows, cols = (3,3)
+        for i in range(rows):
+            # append an empty list to your two arrays
+            # so you can append to those later
+            text_var.append([])
+            entries.append([])
+            label_frames.append(LabelFrame(risk_matrix, text='High Risk accounts', pady=5))
+            label_frames[i].pack(side=TOP)
+            for j in range(cols):
+                # append your StringVar and Entry
+                text_var[i].append(StringVar())
+                entries[i].append(Entry(label_frames[i], textvariable=text_var[i][j],width=5))
+                # entries[i][j].place(x=20 + x2, y=20 + y2)
+                print(i,j)
+                entries[i][j].pack(side=LEFT,anchor=self.return_anchor(i,j))
 
+       
+        # button= Button(risk_matrix,text="Submit", bg='bisque3', width=15, 
+        # command=(lambda : self.get_mat(text_var=text_var)))
+        # button.place(x=160,y=140)
+
+        risk_matrix.pack(side=TOP,fill=X)
+    
+    
+  
+    def return_anchor(self,i,j):
+        anchor = ''
+        if i == 0:
+            anchor = anchor + 'n'
+            if j == 0:
+                anchor = anchor + 'w'
+            if j == 2:
+                anchor = anchor + 'e'
+        if i == 1:
+            anchor = anchor + 'center'
+            if j == 0:
+                anchor = 'w'
+            if j == 2:
+                anchor = 'e'
+        if i == 2:
+            anchor = anchor + 's'
+            if j == 0:
+                anchor = anchor + 'w'
+            if j == 2:
+                anchor = anchor + 'e'
+        return anchor
+
+
+    def get_mat(self,text_var):
+        matrix = []
+        rows, cols = (3,3)
+        for i in range(rows):
+            matrix.append([])
+            for j in range(cols):
+                matrix[i].append(text_var[i][j].get())
+        print(matrix)
+        
     def addAccountScreen(self):
         self.is_single_accountValid = False
         self.broker = StringVar()
         self.broker.set('angel')
-        win = Toplevel(self, height=550, width=500, padx=20,
+        win = Toplevel(self, height=600, width=500, padx=20,
                        pady=20)
         win.pack_propagate(0)
         win.title('Add Account')
         win.config()
-        Button(win, text='Import Accounts from a CSV', command=(
-            self.loadAccounts)).pack(side=TOP, fill=X)
+        Button(win, text='Import Accounts from a CSV',
+               command=self.loadAccounts).pack(side=TOP, fill=X)
         Label(win, text='OR', fg='black', pady=15).pack(fill=X, side=TOP)
         main_account_input_frame = LabelFrame(win,
                                               text='Add a single account', pady=10, padx=10)
@@ -692,10 +763,10 @@ class CopyTraderGUI(Frame):
         broker = LabelFrame(main_account_input_frame, text='Broker', pady=5)
         broker.pack(side=TOP, fill=X)
         radio1 = Radiobutton(broker, text='Angel', command=(
-            lambda: self.orderType()), variable=(self.broker), value='angel')
+            lambda: self.orderType()), variable=self.broker, value='angel')
         radio1.pack(side=LEFT, fill=X)
         radio2 = Radiobutton(broker, text='Zerodha', command=(
-            lambda: self.orderType()), variable=(self.broker), value='zerodha')
+            lambda: self.orderType()), variable=self.broker, value='zerodha')
         radio2.pack(side=LEFT, fill=X)
         clinet_id = LabelFrame(main_account_input_frame, text='Client ID',
                                pady=5,
@@ -732,12 +803,34 @@ class CopyTraderGUI(Frame):
         self.totp_key_entry = Entry(totp_key,
                                     text='Enter TOTP key')
         self.totp_key_entry.pack(side=TOP, fill=X)
+
+        account_level_risk = LabelFrame(main_account_input_frame, text='Account level risk',
+                                        pady=5,
+                                        padx=5)
+
+        # setting variable for Integers
+        self.account_risk = StringVar()
+        self.account_risk.set(self.account_risk_vars[0])
+        # creating widget
+        account_risk_option = OptionMenu(
+            account_level_risk,
+            self.account_risk,
+            *self.account_risk_vars,
+            command=self.display_selected
+        )
+        # positioning widget
+        account_risk_option.pack(expand=True)
+        account_level_risk.pack(side=TOP, anchor=W)
         single_acc_save_btn = Button(
             main_account_input_frame, text='Save Account', command=(self.validate_single_account))
         single_acc_save_btn.pack(side=RIGHT, anchor=SE)
         single_acc_save_btn.configure(state='disable')
         Button(main_account_input_frame, text='Test Account', command=(
             lambda: self.validate_single_account(single_acc_save_btn))).pack(side=RIGHT, anchor=SE)
+
+    def display_selected(self, choice):
+        choice = self.account_risk.get()
+        print(choice)
 
     def validate_single_account(self, single_acc_btn):
         if self.broker.get() == '':
@@ -759,7 +852,7 @@ class CopyTraderGUI(Frame):
             print('broker:{0}\nclient id:{1}\npassword:{2}\nsecret key:{3}\ntotp key:{4}'.format(self.broker.get(
             ), self.clinet_id_entry.get(), self.password_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get()))
             temp_account_object = Account(self.clinet_id_entry.get(), self.password_entry.get(
-            ), self.api_key_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get(), self.broker.get())
+            ), self.api_key_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get(), self.broker.get(), self.account_risk.get())
             for x in self.listOfAccounts:
                 if x.client_id == self.clinet_id_entry.get():
                     showerror('Account already exists',
@@ -777,8 +870,9 @@ class CopyTraderGUI(Frame):
                           'Please recheck your credetials or try again later')
 
     def save_single_account(self):
-        temp_account_object = Account(self.clinet_id_entry.get(), self.password_entry.get(
-        ), self.api_key_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get(), self.broker.get())
+        temp_account_object = Account(self.clinet_id_entry.get(), self.password_entry.get(),
+                                      self.api_key_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get(),
+                                      self.broker.get(), self.account_risk.get())
         try:
             if temp_account_object.authStatus == 'Logged In':
                 self.account_db.insert_account_single_entry(

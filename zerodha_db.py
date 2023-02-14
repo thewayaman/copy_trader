@@ -144,7 +144,8 @@ class ZerodhaInstruments():
                                         exchange TEXT NOT NULL
                                     ); """
                 )
-                results = self.db_object.query(''' SELECT * FROM instruments_zerodha WHERE exch_seg = 'NFO' LIMIT 5''')
+                results = self.db_object.query(
+                ''' SELECT * FROM instruments_zerodha WHERE exchange_token = '{0}' LIMIT 1'''.format(symbol_token))
                 # print(self.db_object.query('SELECT * FROM updates_date_zerodha LIMIT 1'), 'DB utility 1')
                 return results
             else:

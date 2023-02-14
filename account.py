@@ -1,4 +1,6 @@
 
+import socket
+import uuid
 from angel_order_ws import AngelOrderWS, AngelOrderWSV1
 import constant
 import requests
@@ -13,13 +15,14 @@ from zerodha_db import ZerodhaInstruments
 
 class Account(object):
 
-    def __init__(self, CLIENT_ID, PASSWORD, APIKEY, SECRETKEY, TOTP_KEY, BROKER):
+    def __init__(self, CLIENT_ID, PASSWORD, APIKEY, SECRETKEY, TOTP_KEY, BROKER, RISK='LOW'):
         self.client_id = CLIENT_ID
         self.password = PASSWORD
         self.api_key = APIKEY
         self.secret_key = SECRETKEY
         self.totp_key = TOTP_KEY
         self.broker = BROKER
+        self.risk_setting = RISK
         self.accountInfo = {"status": 'true', "message": "SUCCESS", "errorcode": "", "data": {"jwtToken": "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkExMjk1NjgzIiwicm9sZXMiOjAsInVzZXJ0eXBlIjoiVVNFUiIsImlhdCI6MTY3MzE2MTM1NywiZXhwIjoxNzU5NTYxMzU3fQ.L3NYyts9_oO37zCxGTovWbbZYDTlP7Zq2LplnKKqZ17L6eOh18qZocoLuDWf9WkOnZZ5PSAbfeloxR43aNVmmQ",
                                                                                               "refreshToken": "eyJhbGciOiJIUzUxMiJ9.eyJ0b2tlbiI6IlJFRlJFU0gtVE9LRU4iLCJpYXQiOjE2NzMxNjEzNTd9.qciX-XwoTVJgE2KLqGOyC4nV8xuxY_K_3-9_juLQ0RPaiE8ylPdhGXHIw6IoKnqu3ilJ76WdKtWQVq4YFVseJA", "feedToken": "0806422956"}}
         self.tempAccountInfo = {
@@ -28,27 +31,29 @@ class Account(object):
             "feedToken": "0887245285"
         }
         self.userProfile = ''
-        # 'Logged Out' 'Login Error' 'Logged In'
-        self.authStatus = 'Logged Out'
-        if self.broker == 'zerodha':
-            self.conn = http.client.HTTPSConnection(
-                "api.kite.trade")
-        else:
-            self.conn = http.client.HTTPSConnection(
-                "apiconnect.angelbroking.com")
-
         self.headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-UserType': 'USER',
             'X-SourceID': 'WEB',
             # 'X-ClientLocalIP': s.getsockname()[0],
-            'X-ClientLocalIP': constant.CLIENTLOCALIP,
+            # 'X-ClientLocalIP': constant.CLIENTLOCALIP,
             # 'X-ClientPublicIP': format(ip),
-            'X-ClientPublicIP': constant.CLIENTLOCALIP,
-            'X-MACAddress': constant.MACADDRESS,
-            'X-PrivateKey': constant.APIKEY
+            # 'X-ClientPublicIP': constant.CLIENTLOCALIP,
+            # 'X-MACAddress': constant.MACADDRESS,
+            # 'X-PrivateKey': constant.APIKEY
         }
+        # 'Logged Out' 'Login Error' 'Logged In'
+        self.authStatus = 'Logged Out'
+        if self.broker == 'zerodha':
+            self.conn = http.client.HTTPSConnection(
+                "api.kite.trade")
+        else:
+            # self.create_headers()
+            self.conn = http.client.HTTPSConnection(
+                "apiconnect.angelbroking.com")
+
+        
 
         """ WS CONSTANTS """
         self.HB_INTERVAL = 30
@@ -70,14 +75,14 @@ class Account(object):
                 "  APIKEY = {2}\n"
                 "  SECRETKEY = {3} \n"
                 "  TOTP_KEY = {4} \n"
-                #    "  PPTL = {5}"
-                .format(self.client_id, self.password, self.api_key, self.secret_key, self.totp_key))
+                   "  RISK = {5}"
+                .format(self.client_id, self.password, self.api_key, self.secret_key, self.totp_key,self.risk_setting))
 
     def status(self):
-        return (self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.authStatus)
+        return (self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.authStatus,self.risk_setting)
 
     def tuple_val(self):
-        return tuple((self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.broker))
+        return tuple((self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.broker,self.risk_setting))
 
     def is_valid(self):
         if self.client_id == None:
@@ -92,6 +97,33 @@ class Account(object):
             return False
         else:
             return True
+
+    def create_headers(self):
+        retries = 0
+        success = False
+        while not success and retries < 3:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))
+                print('My ClientLocalIP:{}',s.getsockname()[0])
+                ip = requests.get('https://api.ipify.org').content.decode('utf8')
+                print('My public IP address is: {}'.format(ip))
+                print ("The formatted MAC address is : ", end="")
+                mac_address = ':'.join(['{:02x}'.format((uuid.getnode() >> elements) & 0xff)
+                for elements in range(0,2*6,2)][::-1])
+                print (mac_address) 
+                self.headers['X-ClientLocalIP'] = s.getsockname()[0]
+                self.headers['X-ClientPublicIP'] = format(ip)
+                self.headers['X-MACAddress'] = mac_address
+                self.headers['X-PrivateKey'] = self.api_key
+                s.close()
+                success = True
+            except Exception as e:
+                print(e)
+                retries += 1
+                self.authStatus = 'Logged Out'
+        
+
 
     def wstest(self):
         print('wstest connection')
