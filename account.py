@@ -13,6 +13,7 @@ from zerodha_login import ZerodhaConnect, ZerodhaConnectV2
 from hashlib import sha256
 from zerodha_db import ZerodhaInstruments
 
+
 class Account(object):
 
     def __init__(self, CLIENT_ID, PASSWORD, APIKEY, SECRETKEY, TOTP_KEY, BROKER, RISK='LOW'):
@@ -53,8 +54,6 @@ class Account(object):
             self.conn = http.client.HTTPSConnection(
                 "apiconnect.angelbroking.com")
 
-        
-
         """ WS CONSTANTS """
         self.HB_INTERVAL = 30
         self.HB_THREAD_FLAG = False
@@ -66,7 +65,6 @@ class Account(object):
         self.WSOBJECTCONTAINER = AngelOrderWSV1()
         self.WSOBJECTCONTAINER.setDaemon(True)
         # self.WSOBJECTCONTAINER.start()
-        
 
     def __str__(self):
         return ("Arm object:\n"
@@ -75,14 +73,14 @@ class Account(object):
                 "  APIKEY = {2}\n"
                 "  SECRETKEY = {3} \n"
                 "  TOTP_KEY = {4} \n"
-                   "  RISK = {5}"
-                .format(self.client_id, self.password, self.api_key, self.secret_key, self.totp_key,self.risk_setting))
+                "  RISK = {5}"
+                .format(self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.risk_setting))
 
     def status(self):
-        return (self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.authStatus,self.risk_setting)
+        return (self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.authStatus, self.risk_setting)
 
     def tuple_val(self):
-        return tuple((self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.broker,self.risk_setting))
+        return tuple((self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.broker, self.risk_setting))
 
     def is_valid(self):
         if self.client_id == None:
@@ -105,13 +103,14 @@ class Account(object):
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(("8.8.8.8", 80))
-                print('My ClientLocalIP:{}',s.getsockname()[0])
-                ip = requests.get('https://api.ipify.org').content.decode('utf8')
+                print('My ClientLocalIP:{}', s.getsockname()[0])
+                ip = requests.get(
+                    'https://api.ipify.org').content.decode('utf8')
                 print('My public IP address is: {}'.format(ip))
-                print ("The formatted MAC address is : ", end="")
+                print("The formatted MAC address is : ", end="")
                 mac_address = ':'.join(['{:02x}'.format((uuid.getnode() >> elements) & 0xff)
-                for elements in range(0,2*6,2)][::-1])
-                print (mac_address) 
+                                        for elements in range(0, 2*6, 2)][::-1])
+                print(mac_address)
                 self.headers['X-ClientLocalIP'] = s.getsockname()[0]
                 self.headers['X-ClientPublicIP'] = format(ip)
                 self.headers['X-MACAddress'] = mac_address
@@ -122,8 +121,6 @@ class Account(object):
                 print(e)
                 retries += 1
                 self.authStatus = 'Logged Out'
-        
-
 
     def wstest(self):
         print('wstest connection')
@@ -156,9 +153,8 @@ class Account(object):
                 print(e)
                 retries += 1
 
-
             # payload = "{\n\"clientcode\":\"CLIENT_ID\",\n\"password\":\"CLIENT_PASSWORD\"\n,\n\"totp\":\"TOTP_CODE\"\n}"
-            
+
             json_data = json.dumps(payload)
             """ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
@@ -257,7 +253,7 @@ class Account(object):
                         retries = 5
                 except Exception as e:
                     print("Couldn't parse the JSON response received from the server: {content}".format(
-                        content=res),e)
+                        content=res), e)
                     retries += 1
         else:
             self.authStatus = 'Login Error'
@@ -350,7 +346,8 @@ class Account(object):
 
     def convert_order(self, orderObject):
         var_zerodha_db = ZerodhaInstruments()
-        var_zerodha_db.get_specific_instruments_data(orderObject['tradingsymbol'])
+        var_zerodha_db.get_specific_instruments_data(
+            orderObject['tradingsymbol'])
         if len(var_zerodha_db) != 0:
             print(var_zerodha_db)
         variety_converter = {
@@ -382,9 +379,9 @@ class Account(object):
             'validity': duration_converter[orderObject['duration']],
             'tradingsymbol': orderObject['tradingsymbol'],
             'exchange': orderObject['exchange'],
-            'quantity': orderObject['quantity'],
+            'quantity': int(orderObject['quantity']) if (orderObject['quantity'] != '') else 0,
             'transaction_type': orderObject['transactiontype'],
-            'price': float(orderObject['price']) if (orderObject['price'] != '') else 0 
+            'price': float(orderObject['price']) if (orderObject['price'] != '') else 0
         }
 
     def place_order(self, orderObject):
@@ -395,11 +392,12 @@ class Account(object):
         product(CNC,NRML,MIS)                   -> producttype(DELIVERY,CARRYFORWARD,MARGIN,INTRADAY,BO)
         validity(DAY,IOC,TTL)                   -> duration(DAY,IOC)
         """
-
+        response = ''
         if self.broker == 'zerodha':
-            self.place_order_zerodha(orderObject)
+            response = self.place_order_zerodha(orderObject)
         else:
-            self.place_order_angel(orderObject)
+            response = self.place_order_angel(orderObject)
+        return response
 
     def place_order_angel(self, convertedOrderObject):
         if self.authStatus == 'Logged In':
@@ -407,7 +405,7 @@ class Account(object):
             success = False
             while not success and retries < 3:
                 try:
-                    
+
                     self.headers['Authorization'] = "Bearer {0}".format(
                         self.accountInfo['data']['jwtToken'])
                     json_data = json.dumps(convertedOrderObject)
@@ -418,9 +416,11 @@ class Account(object):
                     data = res.read()
                     print(res.status, data.decode("utf-8"))
                     success = True
-                except :
+                    return data.decode("utf-8")
+                except:
                     print("Error occured")
                     retries += 1
+                    return 'Error occured'
 
     def place_order_zerodha(self, orderObject):
         convertedOrderObject = self.convert_order(orderObject=orderObject)
@@ -442,13 +442,52 @@ class Account(object):
                     print(self.headers, convertedOrderObject, '392')
                     res = requests.post("https://api.kite.trade" + constant.PLACEORDERZERODHA +
                                         '/{0}'.format(order_variety),
-                                        convertedOrderObject,headers= self.headers)
+                                        convertedOrderObject, headers=self.headers)
                     print(res)
                     print(res.status_code, res.json(), '396')
                     success = True
-                except :
+                    return res.json()
+                except:
                     print("Error occured")
                     retries += 1
+                    return 'Error occured'
+
+    def last_traded_price(self,orderObject):
+        response = 0
+        if self.broker == 'zerodha':
+            response = self.ltp_zerodha(orderObject)
+        else:
+            response = self.ltp_angel(orderObject)
+        return response
+
+    def ltp_zerodha(self,orderObject):
+        pass
+
+    def ltp_angel(self,orderObject):
+        retries = 0
+        success = False
+        while not success and retries < 3:
+            try:
+
+                self.headers['Authorization'] = "Bearer {0}".format(
+                    self.accountInfo['data']['jwtToken'])
+                json_data = json.dumps({
+                    "exchange": "NSE",
+                    "tradingsymbol": "SBIN-EQ",
+                    "symboltoken": "3045"
+                })
+                print(self.headers, json_data)
+                self.conn.request("POST", constant.GETINSTRUMENTLTP, json_data,
+                                  self.headers)
+                res = self.conn.getresponse()
+                data = res.read()
+                print(res.status, data.decode("utf-8"))
+                success = True
+                return data.decode("utf-8").ltp
+            except:
+                print("Error occured")
+                retries += 1
+                return 0
 
     def logout(self):
         if self.authStatus == 'Logged In' and self.broker == 'zerodha':
@@ -471,10 +510,12 @@ class Account(object):
                     # res = self.conn.getresponse()
                     # data = res.read()
                     # print(res.status, data.decode("utf-8"))
+                    if res.status_code.code == 200:
+                        self.authStatus = 'Logged Out'
                     success = True
                     return
                 except Exception as e:
-                    print("Error occured",e)
+                    print("Error occured", e)
                     retries += 1
         if self.authStatus == 'Logged In' and self.broker != 'zerodha':
             retries = 0
@@ -484,23 +525,24 @@ class Account(object):
                     self.headers['Authorization'] = "Bearer {0}".format(
                         self.accountInfo['data']['jwtToken'])
                     json_data = json.dumps({
-                         "clientcode": self.client_id
+                        "clientcode": self.client_id
                     })
                     print(self.headers, json_data)
                     self.conn.request("POST", constant.LOGOUT, json_data,
                                       self.headers)
                     res = self.conn.getresponse()
                     data = res.read()
-                    print(res.status, data.decode("utf-8"))
+                    print(res.status, data.decode("utf-8"),'535')
+                    if res.status == 200:
+                        self.authStatus = 'Logged Out'
                     success = True
                     return
                 except Exception as e:
-                    print("Error occured",e)
+                    print("Error occured", e)
                     retries += 1
-        # self.WSOBJECTCONTAINER.close()   
+        # self.WSOBJECTCONTAINER.close()
 
     def get_auth_status(self):
         return self.authStatus
 
     """ WS CODE BEGINS HERE """
-

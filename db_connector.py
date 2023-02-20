@@ -6,6 +6,13 @@ logging.basicConfig(level=logging.INFO,
                     format='%(process)d-%(levelname)s-%(message)s')
 
 class Database():
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            print('Creating the object')
+            cls._instance = super(Database, cls).__new__(cls)
+        return cls._instance
     def __init__(self,database_name = '/home/jayant/Desktop/copy_trader.db') -> None:
         self.database_name = database_name
         try:

@@ -19,9 +19,10 @@ GETORDERBOOK = "secure/angelbroking/order/v1/getOrderBook"
 LOGOUT = "/rest/secure/angelbroking/user/v1/logout"
 WSORDER = "wss://smartapisocket.angelbroking.com/websocket"
 INSTRUMENTCSVDUMP = '/OpenAPI_File/files/OpenAPIScripMaster.json'
-
+GETINSTRUMENTLTP = 'order-service/rest/secure/angelbroking/order/v1/getLtpData'
 
 INSTRUMENTCSVDUMPZERODHA = '/instruments'
 GENERATESESSIONTOKEN = '/session/token'
 FETCHUSERPROFILE = '/user/profile'
 PLACEORDERZERODHA = '/orders'
+GETINSTRUMENTLTPZERODHA = 'quote/ltp'
