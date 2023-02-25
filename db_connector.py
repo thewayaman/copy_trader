@@ -1,3 +1,4 @@
+import platform
 import sqlite3
 from sqlite3 import Error
 import logging
@@ -14,6 +15,8 @@ class Database():
             cls._instance = super(Database, cls).__new__(cls)
         return cls._instance
     def __init__(self,database_name = '/home/jayant/Desktop/copy_trader.db') -> None:
+        if platform.system() != 'Linux':
+             database_name = './copy_trader.db'
         self.database_name = database_name
         try:
             self.connection = sqlite3.connect(self.database_name)

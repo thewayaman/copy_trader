@@ -16,7 +16,7 @@ from zerodha_db import ZerodhaInstruments
 
 class Account(object):
 
-    def __init__(self, CLIENT_ID, PASSWORD, APIKEY, SECRETKEY, TOTP_KEY, BROKER, RISK='LOW'):
+    def __init__(self, CLIENT_ID, PASSWORD, APIKEY, SECRETKEY, TOTP_KEY, BROKER, RISK='low'):
         self.client_id = CLIENT_ID
         self.password = PASSWORD
         self.api_key = APIKEY

@@ -18,10 +18,12 @@ from account import Account
 from account_db import Account_DB
 from angel_db import AngelInstruments
 from zerodha_db import ZerodhaInstruments
+from risk_profile_db import RiskProfile
 from datetime import datetime
 from progress_bar import ProgressBarPanel
 import csv
 import queue
+import copy
 # from utility_treads import InternetUtility
 
 Width, Height = 650, 460
@@ -59,6 +61,7 @@ class CopyTraderGUI(Frame):
             self.makeWidgets()
             self.createListOfAccountsWidget()
             self.setup_database()
+            self.setup_default_risk_profiles()
             self.pack(expand=YES, fill=BOTH)
         else:
             try:
@@ -185,14 +188,20 @@ class CopyTraderGUI(Frame):
         accountSettingsFrame.pack(side=RIGHT, fill=Y)
         account_orderplacement_panel = {}
         account_riskpanel = {}
+        account_quantity_panel = {}
+        account_risk_setting = {}
         for acc in self.listOfAccounts:
             account_frame = LabelFrame(
                 accountSettingsFrame, text=str(acc.client_id), padx=10)
             account_frame.pack(side=TOP, fill=X)
+
             account_orderplacement_panel[acc.client_id] = BooleanVar()
             account_riskpanel[acc.client_id] = BooleanVar()
+            account_quantity_panel[acc.client_id] = DoubleVar()
+            account_risk_setting[acc.client_id] = acc.risk_setting
             account_orderplacement_panel[acc.client_id].set(True)
             account_riskpanel[acc.client_id].set(True)
+
             local_risk_checkbox = Checkbutton(
                 account_frame, text='Risk', var=(account_riskpanel[acc.client_id]))
             local_risk_checkbox.pack(side=LEFT)
@@ -200,6 +209,10 @@ class CopyTraderGUI(Frame):
             local_checkbox = Checkbutton(
                 account_frame, text='Active', var=(account_orderplacement_panel[acc.client_id]))
             local_checkbox.pack(side=LEFT)
+
+            local_entry = Entry(
+                account_frame, textvariable=account_quantity_panel[acc.client_id], width=10)
+            local_entry.pack(side=LEFT)
             # local_checkbox.select()
             print('>>>>>>>>>>>>>>')
             print(account_orderplacement_panel[acc.client_id],
@@ -236,7 +249,11 @@ class CopyTraderGUI(Frame):
                 self.listBoxOfInstruments.insert(END, instrument[1])
 
         self.listBoxOfInstruments.bind(
-            '<ButtonRelease-1>', self.selectInstrument)
+            '<ButtonRelease-1>', (lambda e: self.selectInstrument(
+                account_riskpanel,
+                account_quantity_panel,
+                account_risk_setting
+            )))
         selectedInstrument = Frame(win, height=300, width=400, pady=2)
         labP = Label(selectedInstrument, width=20,
                      text='Selected Instrument')
@@ -246,21 +263,37 @@ class CopyTraderGUI(Frame):
         labP.pack(side=LEFT)
         self.selectedInstrument.pack(side=LEFT, expand=YES)
 
-        self.account_level_risk_checkbox = BooleanVar()
-        self.account_level_risk_checkbox.set(False)
+        self.order_level_risk_checkbox = BooleanVar()
+        self.order_level_risk_checkbox.set(False)
         self.order_level_risk_category = StringVar()
         self.order_level_risk_category.set('low')
         risk_panel = LabelFrame(
             win, height=300, width=400, text='Risk management')
         risk_panel.pack(side=TOP, fill=X)
-        Radiobutton(risk_panel, text='High', command=(), variable=(
+        Radiobutton(risk_panel, text='High', command=(lambda: self.multiplyLots(
+            account_riskpanel,
+            account_quantity_panel,
+            account_risk_setting
+        )), variable=(
             self.order_level_risk_category), value='high').pack(side=LEFT)
-        Radiobutton(risk_panel, text='Medium', command=(), variable=(
+        Radiobutton(risk_panel, text='Medium', command=(lambda: self.multiplyLots(
+            account_riskpanel,
+            account_quantity_panel,
+            account_risk_setting
+        )), variable=(
             self.order_level_risk_category), value='medium').pack(side=LEFT)
-        Radiobutton(risk_panel, text='Low', command=(), variable=(
+        Radiobutton(risk_panel, text='Low', command=(lambda: self.multiplyLots(
+            account_riskpanel,
+            account_quantity_panel,
+            account_risk_setting
+        )), variable=(
             self.order_level_risk_category), value='low').pack(side=LEFT)
-        Checkbutton(risk_panel, text='Disable Risk Management', command=(
-        ), padx=30, variable=(self.account_level_risk_checkbox)).pack(side='left')
+        Checkbutton(risk_panel, text='Disable Risk Management',
+                    command=(lambda: self.multiplyLots(
+                        account_riskpanel,
+                        account_quantity_panel,
+                        account_risk_setting
+                    )), padx=30, variable=(self.order_level_risk_checkbox)).pack(side='left')
 
         exchange = LabelFrame(win, height=300, width=400, text='Exchange')
         exchange.pack(side=TOP, fill=X)
@@ -314,11 +347,18 @@ class CopyTraderGUI(Frame):
         self.entL.configure(state='disable')
         labM = Label(quantity, width=10, text='Multiples')
         current_value_quant = StringVar(value=1)
-        self.entM = Spinbox(quantity, from_=0, to=50, values=(0, 10, 20, 30, 40,
-                                                              50), width=5, textvariable=current_value_quant,
-                            wrap=False,
-                            command=(self.multiplyLots))
-        self.entM.bind('<KeyRelease>', self.btnClickMultiplyLots)
+        self.entM = Spinbox(quantity, from_=0, to=50, values=(0, 10, 20, 30, 40, 50),
+                            width=5, textvariable=current_value_quant, wrap=False,
+                            command=(lambda: self.multiplyLots(
+                                account_riskpanel,
+                                account_quantity_panel,
+                                account_risk_setting
+                            )))
+        self.entM.bind('<KeyRelease>', (lambda e: self.multiplyLots(
+            account_riskpanel,
+            account_quantity_panel,
+            account_risk_setting
+        )))
         labM.pack(side=LEFT)
         self.entM.pack(side=LEFT)
         labQ = Label(quantity, width=15, text='Total Quantity')
@@ -332,19 +372,63 @@ class CopyTraderGUI(Frame):
         quantity.pack(side=TOP, fill=X)
         btnsFrame = Frame(win, height=300, width=400, padx=20, pady=4)
         confirmBtn = Button(btnsFrame, text='Confirm', command=(
-            lambda: self.executeOrder(account_orderplacement_panel)))
-        cancelBtn = Button(btnsFrame, text='Cancel', command=())
+            lambda: self.executeOrder(
+                account_orderplacement_panel,
+                account_quantity_panel,
+                account_riskpanel
+                )))
+        # cancelBtn = Button(btnsFrame, text='Cancel', command=())
         btnsFrame.pack(side=TOP, fill=X)
         confirmBtn.pack(side=LEFT, pady=4, padx=4)
-        cancelBtn.pack(side=LEFT, pady=4, padx=4)
+        # cancelBtn.pack(side=LEFT, pady=4, padx=4)
         self.stop_progressbar()
 
-    def multiplyLots(self):
+    def multiplyLots(self, riskpanel, quantity_panel, risk_setting):
+        """  account_riskpanel,
+            account_quantity_panel,
+            account_risk_setting """
         if self.entM.get() != '' and self.entL.get() != '':
             print(type(self.entM.get()), type(self.entL.get()))
             self.entQ.delete(0, END)
             self.entQ.insert(0, int(float(self.entM.get()))
                              * int(float(self.entL.get())))
+        print(self.entM)
+        account_risk_matrix = {
+            'low': 0,
+            'medium': 0,
+            'high': 0
+        }
+        if self.order_level_risk_checkbox.get() == False:
+            order_index = 0
+            if self.order_level_risk_category.get() == 'low':
+                order_index = 2
+            elif self.order_level_risk_category.get() == 'medium':
+                order_index = 1
+
+            account_risk_matrix['low'] = self.order_risk_profile_var[order_index][0].get(
+            )
+            account_risk_matrix['medium'] = self.order_risk_profile_var[order_index][1].get(
+            )
+            account_risk_matrix['high'] = self.order_risk_profile_var[order_index][2].get(
+            )
+        else:
+            
+            account_risk_matrix['low'] = self.account_risk_profile_var[0].get(
+            )
+            account_risk_matrix['medium'] = self.account_risk_profile_var[1].get(
+            )
+            account_risk_matrix['high'] = self.account_risk_profile_var[2].get(
+            )
+        if quantity_panel.values() != 0:
+            for elem in quantity_panel.keys():
+                quantity_panel[elem].set(round(float( 0 if self.entM.get() == '' else self.entM.get()) * account_risk_matrix[risk_setting[elem]] / 100))
+                print(
+                    elem,
+                    risk_setting[elem],
+                    self.entM.get(),
+                    account_risk_matrix[risk_setting[elem]],
+                    self.order_level_risk_category.get()
+                )
 
     def loadOrderScreen(self):
         win = Toplevel(self, height=550, width=900, padx=20,
@@ -403,18 +487,11 @@ class CopyTraderGUI(Frame):
         else:
             self.Ordercanvas.after(3000, self.rerenderOrderFrame)
 
-    def btnClickMultiplyLots(self, event):
-        if self.entM.get() != '' and self.entL.get() != '':
-            print(type(self.entM.get()), type(self.entL.get()))
-            self.entQ.delete(0, END)
-            self.entQ.insert(0, int(float(self.entM.get()))
-                             * int(float(self.entL.get())))
-
     def onFrameConfigure(self, event):
         '''Reset the scroll region to encompass the inner frame'''
         self.Ordercanvas.configure(scrollregion=self.Ordercanvas.bbox("all"))
 
-    def selectInstrument(self, event):
+    def selectInstrument(self, riskpanel, quantity_panel, risk_setting):
         try:
             index = self.listBoxOfInstruments.curselection()  # on list double-click
             label = self.listBoxOfInstruments.get(index)
@@ -429,7 +506,7 @@ class CopyTraderGUI(Frame):
             self.entL.delete(0, END)
             self.entL.insert(0, instrument[5])
             self.entL.configure(state="disable")
-            self.multiplyLots()
+            self.multiplyLots(riskpanel, quantity_panel, risk_setting)
             self.selectedInstrumentData = instrument
             print("Selected", label,
                   instrument, instrument[5])
@@ -440,7 +517,7 @@ class CopyTraderGUI(Frame):
     def get_last_traded_price(self):
         pass
 
-    def executeOrder(self, accounts_object):
+    def executeOrder(self, accounts_object, quantity_panel,risk_panel):
         for e in accounts_object.values():
             print(e.get(), 'iteration')
 
@@ -466,18 +543,27 @@ class CopyTraderGUI(Frame):
             'squareoff': '0',
             'stoploss': '0',
             'quantity': self.entM.get()
-        }
-        # print(orderObject)
-        print(orderObject)
+        }        
+        print(orderObject,'547')
         post_order_success = {}
         for acc in self.listOfAccounts:
             if accounts_object.get(acc.client_id) != 'None' and accounts_object.get(acc.client_id).get() == True:
-                print(acc.client_id)
+                print(acc.client_id,risk_panel[acc.client_id].get(),risk_panel[acc.client_id].get() == True)
                 if acc.get_auth_status() == 'Logged In':
-                    post_order_success[acc.client_id] = acc.place_order(
-                        orderObject)
+                    if risk_panel[acc.client_id].get() == True :
+                        order_object_copy = copy.deepcopy(orderObject)
+                        order_object_copy['quantity'] = str(quantity_panel[acc.client_id].get())
+                        print(order_object_copy,'557')
+                        post_order_success[acc.client_id] = acc.place_order(
+                            order_object_copy)
+                    else:
+                        print(orderObject,'561')
+                        post_order_success[acc.client_id] = acc.place_order(
+                            orderObject)
                 else:
                     post_order_success[acc.client_id] = 'Not logged in to place orders'
+            else:
+                post_order_success[acc.client_id] = 'Inactive account'
         self.post_order_execeution_screen(post_order_success, orderObject)
 
     def post_order_execeution_screen(self, accounts_order_object, order_object):
@@ -528,9 +614,9 @@ class CopyTraderGUI(Frame):
         print('')
 
     def loadAccounts(self):
-        # name = askopenfilename(initialdir='.', filetypes=jsonTypes)
+        name = askopenfilename(initialdir='.', filetypes=jsonTypes)
         # print(name)
-        name = '/home/jayant/Desktop/Accounts.xlsx'
+        # name = '/home/jayant/Desktop/Accounts.xlsx'
         print(name, '472')
         loaded_accounts_object = {}
         if name:
@@ -822,24 +908,79 @@ class CopyTraderGUI(Frame):
         # self.prog_bar.remove_bar()
         pass
 
+    def setup_default_risk_profiles(self):
+        self.order_risk_profile_var = []
+        self.account_risk_profile_var = []
+        rows, cols = (3, 3)
+        self.risk_db = RiskProfile()
+        default_risk_profile = self.risk_db.get_risk_profile_by_name(
+            'default_name')
+        print(default_risk_profile)
+        try:
+            if len(default_risk_profile) != 0 and len(default_risk_profile[0]) != 0:
+                print(json.loads(default_risk_profile[0][0]))
+                loaded_profiles = json.loads(default_risk_profile[0][0])
+                for i in range(rows):
+                    self.order_risk_profile_var.append([])
+                    for j in range(cols):
+                        self.order_risk_profile_var[i].append(
+                            DoubleVar(value=loaded_profiles['order_risk'][i][j]))
+
+                for i in range(3):
+                    self.account_risk_profile_var.append(
+                        DoubleVar(value=loaded_profiles['account_risk'][i]))
+
+            else:
+                for i in range(rows):
+                    self.order_risk_profile_var.append([])
+                    for j in range(cols):
+                        self.order_risk_profile_var[i].append(
+                            DoubleVar(value=(i*20)+(j*18) + 20))
+
+                self.account_risk_profile_var = []
+                pos = 33.3
+                for i in range(3):
+                    self.account_risk_profile_var.append(DoubleVar(value=pos))
+                    pos += 33.3
+        except Exception as e:
+            print(e, 'An Exception occured')
+
     def add_risk_rules(self):
         win = Toplevel(self, padx=20, height=500, width=350,
                        pady=20)
         win.pack_propagate(0)
         win.title('Account Risk Rules')
         win.config()
+        # prev_panel = LabelFrame(win, text='Risk Profiles', pady=5, padx=10, width=250)
+        # list_of_risk_profiles = self.risk_db.get_risk_profile_names()
+        #         # setting variable for Integers
+        # # for elem in list_of_risk_profiles:
+
+        # selected_risk_profiles = StringVar()
+        # selected_risk_profiles.set(list_of_risk_profiles[0])
+        # # creating widget
+        # account_risk_option = OptionMenu(
+        #     prev_panel,
+        #     selected_risk_profiles,
+        #     *list_of_risk_profiles
+        # )
+        # # positioning widget
+        # account_risk_option.pack(expand=True)
+
+        # prev_panel.pack(side=TOP, fill=X)
         risk_matrix = LabelFrame(
             win, text='Account risk x Order risk matrix', pady=5, padx=10, width=250)
+        Label(risk_matrix, text='Current profile',
+              pady=20, padx=10, width=250).pack(side=TOP, fill=X)
         Label(risk_matrix, text='Low <------ Accounts ------> High',
               pady=20, padx=10, width=250).pack(side=TOP, fill=X)
-        text_var = []
+        # text_var = []
         entries = []
         label_frames = []
         rows, cols = (3, 3)
         for i in range(rows):
             # append an empty list to your two arrays
             # so you can append to those later
-            text_var.append([])
             entries.append([])
             label_frames.append(LabelFrame(
                 risk_matrix, text=self.return_risk_label(i), pady=5, padx=5))
@@ -847,37 +988,29 @@ class CopyTraderGUI(Frame):
             Label(label_frames[i], text='Low').pack(side=LEFT)
             for j in range(cols):
                 # append your StringVar and Entry
-                text_var[i].append(StringVar())
                 entries[i].append(
-                    Entry(label_frames[i], textvariable=text_var[i][j], width=5))
-                # entries[i][j].place(x=20 + x2, y=20 + y2)
-                print(i, j)
+                    Entry(label_frames[i], textvariable=self.order_risk_profile_var[i][j], width=5))
+                # print(i, j)
                 entries[i][j].pack(side=LEFT, anchor=self.return_anchor(i, j))
             Label(label_frames[i], text='High').pack(side=LEFT)
 
         # button= Button(risk_matrix,text="Submit", bg='bisque3', width=15,
-        # command=(lambda : self.get_mat(text_var=text_var)))
+        # command=(lambda : self.save_risk_profile(text_var=text_var)))
         # button.place(x=160,y=140)
         risk_matrix.pack(side=TOP, fill=X)
-        risk_account_var = []
         risk_account = LabelFrame(
             win, text='Independent account level risk settings', pady=5, padx=10, width=120)
+        Label(risk_account, text='Low ------ Medium ------ High',
+              pady=2, padx=10).pack(side=TOP, fill=X)
+
         for i in range(3):
-            risk_account_var.append(StringVar())
-            Entry(risk_account, textvariable=risk_account_var[i], width=10).pack(
+            Entry(risk_account, textvariable=self.account_risk_profile_var[i], width=10).pack(
                 side=LEFT, anchor=W)
         risk_account.pack(side=TOP, fill=X)
-        risk_order_var = []
-        risk_order = LabelFrame(
-            win, text='Independent order level risk settings', pady=5, padx=10, width=120)
-        for i in range(3):
-            risk_order_var.append(StringVar())
-            Entry(risk_order, textvariable=risk_order_var[i], width=10).pack(
-                side=LEFT, anchor=W)
-        risk_order.pack(side=TOP, fill=X)
+
         button = Button(win, text="Save", width=15,
-                        command=(lambda: self.get_mat(text_var=text_var)))
-        button.pack(side=BOTTOM)
+                        command=(lambda: self.save_risk_profile(text_var=self.order_risk_profile_var, risk_window=win)))
+        button.pack(side=BOTTOM, fill=None)
 
     def return_risk_label(self, i):
         if i == 0:
@@ -909,14 +1042,28 @@ class CopyTraderGUI(Frame):
                 anchor = anchor + 'e'
         return anchor
 
-    def get_mat(self, text_var):
+    def save_risk_profile(self, text_var, risk_window):
         matrix = []
         rows, cols = (3, 3)
         for i in range(rows):
             matrix.append([])
             for j in range(cols):
                 matrix[i].append(text_var[i][j].get())
-        print(matrix)
+
+        order_matrix = []
+        for i in range(3):
+            order_matrix.append(self.account_risk_profile_var[i].get())
+
+        risk_profile = {
+            'order_risk': matrix,
+            'account_risk': order_matrix
+        }
+        print(json.dumps(risk_profile))
+        if self.risk_db.update_risk_profile_by_name('default_name', json.dumps(risk_profile)):
+            if showinfo('Copy Trader', 'Risk profile updated successfully') == 'ok':
+                risk_window.destroy()
+        else:
+            showerror('Copy Trader', 'Failed to update risk profile')
 
     def addAccountScreen(self):
         self.is_single_accountValid = False
