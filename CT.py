@@ -56,7 +56,8 @@ class CopyTraderGUI(Frame):
         self.account_risk_vars = ['Low', 'Medium', 'High']
 
         self.start_progress_bar()
-        if self.check_internet_basic():
+        # if self.check_internet_basic():
+        if True:
             self.load_accounts_from_db()
             self.makeWidgets()
             self.createListOfAccountsWidget()
@@ -110,7 +111,7 @@ class CopyTraderGUI(Frame):
         self.menu.add_cascade(label='Account', menu=account)
         order = Menu(self.menu)
         order.add_command(label='Place Order', command=self.place_order)
-        order.add_command(label='View Order', command=self.loadOrderScreen)
+        # order.add_command(label='View Order', command=self.loadOrderScreen)
         self.menu.add_cascade(label='Order', menu=order)
         self.menu.add_command(label='Quit', command=self.onQuit)
         self.master.configure(menu=self.menu)
@@ -163,6 +164,10 @@ class CopyTraderGUI(Frame):
         # self.loop = 0
         self.onoff.config(text='Start', command=self.onStart)
 
+    def onOrderFrameConfigure(self, canvas):
+        '''Reset the scroll region to encompass the inner frame'''
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
     def place_order(self):
         self.call_progressbar()
         self.orderObject = ''
@@ -183,14 +188,25 @@ class CopyTraderGUI(Frame):
         win.pack_propagate(0)
         win.title('Order')
         win.config()
+        canvas = Canvas(win, borderwidth=0, background="#ffffff", width=210)
         accountSettingsFrame = LabelFrame(
-            win, text='Selected Accounts', height=300, width=200, padx=2)
+            canvas, text='Selected Accounts', height=300, width=200, padx=2)
         accountSettingsFrame.pack(side=RIGHT, fill=Y)
+
+        sbar = Scrollbar(win, orient="vertical", command=(canvas.yview))
+        canvas.configure(yscrollcommand=sbar.set)
+        sbar.pack(side=RIGHT, fill=Y)
+        canvas.pack(side=RIGHT, fill=Y)
+        canvas.create_window((1, 1), window=accountSettingsFrame, anchor="nw")
+        accountSettingsFrame.bind(
+            "<Configure>", lambda event, canvas=canvas: self.onOrderFrameConfigure(canvas))
+
         account_orderplacement_panel = {}
         account_riskpanel = {}
         account_quantity_panel = {}
         account_risk_setting = {}
         for acc in self.listOfAccounts:
+            # if acc.get_auth_status() == 'Logged In':
             account_frame = LabelFrame(
                 accountSettingsFrame, text=str(acc.client_id), padx=10)
             account_frame.pack(side=TOP, fill=X)
@@ -224,7 +240,7 @@ class CopyTraderGUI(Frame):
         labI = Label(Isearch, width=15, text='Search Instrument')
         self.searchInstrumentItem = Entry(Isearch, width=40)
         self.searchInstrumentItem.bind(
-            '<KeyRelease>', self.searchInstruments)
+            '<KeyRelease>', (lambda e: self.searchInstruments()))
         Isearch.pack(side=TOP)
         labI.pack(side=LEFT)
         self.searchInstrumentItem.pack(side=LEFT,
@@ -346,7 +362,7 @@ class CopyTraderGUI(Frame):
         self.entL.insert(0, int(0))
         self.entL.configure(state='disable')
         labM = Label(quantity, width=10, text='Multiples')
-        current_value_quant = StringVar(value=1)
+        current_value_quant = IntVar(value=1)
         self.entM = Spinbox(quantity, from_=0, to=50, values=(0, 10, 20, 30, 40, 50),
                             width=5, textvariable=current_value_quant, wrap=False,
                             command=(lambda: self.multiplyLots(
@@ -372,11 +388,12 @@ class CopyTraderGUI(Frame):
         quantity.pack(side=TOP, fill=X)
         btnsFrame = Frame(win, height=300, width=400, padx=20, pady=4)
         confirmBtn = Button(btnsFrame, text='Confirm', command=(
-            lambda: self.executeOrder(
+            lambda: self.execute_order(
                 account_orderplacement_panel,
                 account_quantity_panel,
-                account_riskpanel
-                )))
+                account_riskpanel,
+                win
+            )))
         # cancelBtn = Button(btnsFrame, text='Cancel', command=())
         btnsFrame.pack(side=TOP, fill=X)
         confirmBtn.pack(side=LEFT, pady=4, padx=4)
@@ -387,6 +404,10 @@ class CopyTraderGUI(Frame):
         """  account_riskpanel,
             account_quantity_panel,
             account_risk_setting """
+        # print(type(self.entM.get()),'391 multiply lot')
+        # if isinstance(self.entM.get(),str):
+        #     showwarning('Copy Trader','Please provide a valid value for multiples')
+        #     return
         if self.entM.get() != '' and self.entL.get() != '':
             print(type(self.entM.get()), type(self.entL.get()))
             self.entQ.delete(0, END)
@@ -412,7 +433,7 @@ class CopyTraderGUI(Frame):
             account_risk_matrix['high'] = self.order_risk_profile_var[order_index][2].get(
             )
         else:
-            
+
             account_risk_matrix['low'] = self.account_risk_profile_var[0].get(
             )
             account_risk_matrix['medium'] = self.account_risk_profile_var[1].get(
@@ -421,7 +442,8 @@ class CopyTraderGUI(Frame):
             )
         if quantity_panel.values() != 0:
             for elem in quantity_panel.keys():
-                quantity_panel[elem].set(round(float( 0 if self.entM.get() == '' else self.entM.get()) * account_risk_matrix[risk_setting[elem]] / 100))
+                quantity_panel[elem].set(round(float(0 if self.entM.get(
+                ) == '' else self.entM.get()) * account_risk_matrix[risk_setting[elem]] / 100))
                 print(
                     elem,
                     risk_setting[elem],
@@ -504,7 +526,7 @@ class CopyTraderGUI(Frame):
             self.selectedInstrument.insert(0, label)
             self.entL.configure(state="normal")
             self.entL.delete(0, END)
-            self.entL.insert(0, instrument[5])
+            self.entL.insert(0, int(instrument[5]))
             self.entL.configure(state="disable")
             self.multiplyLots(riskpanel, quantity_panel, risk_setting)
             self.selectedInstrumentData = instrument
@@ -517,11 +539,20 @@ class CopyTraderGUI(Frame):
     def get_last_traded_price(self):
         pass
 
-    def executeOrder(self, accounts_object, quantity_panel,risk_panel):
+    def execute_order(self, accounts_object, quantity_panel, risk_panel, window_pane):
         for e in accounts_object.values():
             print(e.get(), 'iteration')
 
         index = self.listBoxOfInstruments.curselection()
+        if len(index) == 0:
+            showwarning(
+                'Copy Trader', 'Please select an instrument to proceed', master=window_pane)
+            return
+
+        # if isinstance(self.entM.get(),str):
+        #     showwarning('Copy Trader','Please provide a valid value for multiples',master=window_pane)
+        #     return
+        print(index, 'cursor selection 527')
         label = self.listBoxOfInstruments.get(index)
         instrument = ''
         for item in [k for k in self.instrumentsData if label == k[1]]:
@@ -542,28 +573,44 @@ class CopyTraderGUI(Frame):
             'price': self.entP.get(),
             'squareoff': '0',
             'stoploss': '0',
-            'quantity': self.entM.get()
-        }        
-        print(orderObject,'547')
+            'quantity': self.entQ.get()
+        }
+        if len(self.listOfAccounts) == 0:
+            showinfo('Copy Trader', 'No accounts to execute orders')
+            return
+
         post_order_success = {}
+        is_any_account_logged_in = False
         for acc in self.listOfAccounts:
             if accounts_object.get(acc.client_id) != 'None' and accounts_object.get(acc.client_id).get() == True:
-                print(acc.client_id,risk_panel[acc.client_id].get(),risk_panel[acc.client_id].get() == True)
+
                 if acc.get_auth_status() == 'Logged In':
-                    if risk_panel[acc.client_id].get() == True :
+                    is_any_account_logged_in = True
+                    if risk_panel[acc.client_id].get() == True:
                         order_object_copy = copy.deepcopy(orderObject)
-                        order_object_copy['quantity'] = str(quantity_panel[acc.client_id].get())
-                        print(order_object_copy,'557')
+                        order_object_copy['quantity'] = str(
+                            int(round(quantity_panel[acc.client_id].get())) *
+                            int(self.entL.get())
+                        )
+                        # print(order_object_copy,'557',quantity_panel[acc.client_id].get(),
+                        # int(round(quantity_panel[acc.client_id].get())),int(self.entL.get()),
+                        # int(round(quantity_panel[acc.client_id].get())) *
+                        # int(self.entL.get())
+                        # )
                         post_order_success[acc.client_id] = acc.place_order(
                             order_object_copy)
                     else:
-                        print(orderObject,'561')
+                        # print(orderObject,'561')
                         post_order_success[acc.client_id] = acc.place_order(
                             orderObject)
                 else:
                     post_order_success[acc.client_id] = 'Not logged in to place orders'
             else:
                 post_order_success[acc.client_id] = 'Inactive account'
+
+        if is_any_account_logged_in == False:
+            showinfo('Copy Trader', 'No accounts logged in to execute orders')
+            return
         self.post_order_execeution_screen(post_order_success, orderObject)
 
     def post_order_execeution_screen(self, accounts_order_object, order_object):
@@ -1048,10 +1095,20 @@ class CopyTraderGUI(Frame):
         for i in range(rows):
             matrix.append([])
             for j in range(cols):
+                print(float(text_var[i][j].get()) == 0, float(text_var[i][j].get()) > 100, int(
+                    text_var[i][j].get()) < 0, int(text_var[i][j].get()))
+                if int(text_var[i][j].get()) > 100 or int(text_var[i][j].get()) < 0:
+                    showwarning('Copy Trader',
+                                'Please enter a value within 0 to 100')
+                    return
                 matrix[i].append(text_var[i][j].get())
 
         order_matrix = []
         for i in range(3):
+            if int(self.account_risk_profile_var[i].get()) > 100 or int(self.account_risk_profile_var[i].get()) < 0:
+                showwarning('Copy Trader',
+                            'Please enter a value within 0 to 100')
+                return
             order_matrix.append(self.account_risk_profile_var[i].get())
 
         risk_profile = {

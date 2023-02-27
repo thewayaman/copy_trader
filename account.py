@@ -38,11 +38,11 @@ class Account(object):
             'X-UserType': 'USER',
             'X-SourceID': 'WEB',
             # 'X-ClientLocalIP': s.getsockname()[0],
-            # 'X-ClientLocalIP': constant.CLIENTLOCALIP,
+            'X-ClientLocalIP': constant.CLIENTLOCALIP,
             # 'X-ClientPublicIP': format(ip),
-            # 'X-ClientPublicIP': constant.CLIENTLOCALIP,
-            # 'X-MACAddress': constant.MACADDRESS,
-            # 'X-PrivateKey': constant.APIKEY
+            'X-ClientPublicIP': constant.CLIENTLOCALIP,
+            'X-MACAddress': constant.MACADDRESS,
+            'X-PrivateKey': constant.APIKEY
         }
         # 'Logged Out' 'Login Error' 'Logged In'
         self.authStatus = 'Logged Out'
@@ -346,10 +346,12 @@ class Account(object):
 
     def convert_order(self, orderObject):
         var_zerodha_db = ZerodhaInstruments()
-        var_zerodha_db.get_specific_instruments_data(
-            orderObject['tradingsymbol'])
-        if len(var_zerodha_db) != 0:
-            print(var_zerodha_db)
+        instrument_response = var_zerodha_db.get_specific_instruments_data(
+            orderObject['symboltoken'])
+        print(instrument_response)
+        
+        if len(instrument_response) != 0:
+            print(instrument_response)
         variety_converter = {
             'NORMAL': 'regular',
             'AMO': 'amo',
@@ -377,7 +379,7 @@ class Account(object):
             'order_type': ordertype_converter[orderObject['ordertype']],
             'product': producttype_converter[orderObject['producttype']],
             'validity': duration_converter[orderObject['duration']],
-            'tradingsymbol': orderObject['tradingsymbol'],
+            'tradingsymbol': instrument_response[0][2],
             'exchange': orderObject['exchange'],
             'quantity': int(orderObject['quantity']) if (orderObject['quantity'] != '') else 0,
             'transaction_type': orderObject['transactiontype'],
@@ -420,11 +422,12 @@ class Account(object):
                 except:
                     print("Error occured")
                     retries += 1
-                    return 'Error occured'
+                    
+            return 'Error occured'
 
     def place_order_zerodha(self, orderObject):
         convertedOrderObject = self.convert_order(orderObject=orderObject)
-        print(convertedOrderObject, orderObject)
+        print(convertedOrderObject, orderObject,'429')
 
         if self.authStatus == 'Logged In':
             retries = 0
@@ -450,7 +453,8 @@ class Account(object):
                 except:
                     print("Error occured")
                     retries += 1
-                    return 'Error occured'
+            
+            return 'Error occured'
 
     def last_traded_price(self,orderObject):
         response = 0
