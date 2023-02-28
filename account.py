@@ -79,6 +79,9 @@ class Account(object):
     def status(self):
         return (self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.authStatus, self.risk_setting)
 
+    def get_tree_view(self):
+        return (self.client_id, self.authStatus, self.risk_setting)
+
     def tuple_val(self):
         return tuple((self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.broker, self.risk_setting))
 

@@ -135,13 +135,13 @@ class ZerodhaConnectV2():
             pwd = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH,('//*[@id="password"]'))))
             # pwd = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="password"]'))
             pwd.send_keys(self.user_pwd)
-            time.sleep(3)
+            time.sleep(2)
             submit = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH,('//*[@id="container"]/div/div/div[2]/form/div[4]/button'))))
 
             # submit = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="container"]/div/div/div[2]/form/div[4]/button'))
             submit.click()
 
-            time.sleep(3)
+            time.sleep(2)
             #adjustment to code to include totp
             totp = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.TAG_NAME,('input'))))
             try:
@@ -165,7 +165,7 @@ class ZerodhaConnectV2():
 
             
             request_token = ''
-            time.sleep(3)
+            time.sleep(1)
             try:
                 url = driver.current_url
                 initial_token = url.split('request_token=')[1]
