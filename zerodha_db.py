@@ -150,3 +150,36 @@ class ZerodhaInstruments():
                 return results
             else:
                 return []
+
+
+    def get_specific_instruments_data_by_tradingsymbol(self,symbol_name):
+        print(''' SELECT * FROM instruments_zerodha WHERE tradingsymbol = '{0}' LIMIT 1'''.format(symbol_name))
+        try:
+            results = self.db_object.query(
+                ''' SELECT * FROM instruments_zerodha WHERE tradingsymbol = '{0}' LIMIT 1'''.format(symbol_name))
+            # print(results, 'DB utility')
+            return results
+        except Exception as e:
+            if 'no such table' in repr(e):
+                self.db_object.create_schema(
+                    """ CREATE TABLE IF NOT EXISTS instruments_zerodha (
+                                        instrument_token TEXT PRIMARY KEY,
+                                        exchange_token TEXT NOT NULL,
+                                        tradingsymbol TEXT NOT NULL,
+                                        name TEXT NOT NULL,
+                                        last_price TEXT NOT NULL,
+                                        expiry TEXT,
+                                        strike TEXT,
+                                        tick_size TEXT,
+                                        lot_size TEXT,
+                                        instrument_type TEXT,
+                                        segment TEXT NOT NULL,
+                                        exchange TEXT NOT NULL
+                                    ); """
+                )
+                results = self.db_object.query(
+                ''' SELECT * FROM instruments_zerodha WHERE tradingsymbol = '{0}' LIMIT 1'''.format(symbol_name))
+                # print(self.db_object.query('SELECT * FROM updates_date_zerodha LIMIT 1'), 'DB utility 1')
+                return results
+            else:
+                return []

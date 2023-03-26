@@ -12,6 +12,7 @@ import websocket
 from zerodha_login import ZerodhaConnect, ZerodhaConnectV2
 from hashlib import sha256
 from zerodha_db import ZerodhaInstruments
+from zerodha_order_ws import ZerodhaWSV1
 
 
 class Account(object):
@@ -47,6 +48,7 @@ class Account(object):
         # 'Logged Out' 'Login Error' 'Logged In'
         self.authStatus = 'Logged Out'
         if self.broker == 'zerodha':
+            self.zerodha_db = ZerodhaInstruments()
             self.conn = http.client.HTTPSConnection(
                 "api.kite.trade")
         else:
@@ -62,8 +64,8 @@ class Account(object):
         self.task_dict = {}
         # self.loginTest()
         # self.WSOBJECTCONTAINER = AngelOrderWS()
-        self.WSOBJECTCONTAINER = AngelOrderWSV1()
-        self.WSOBJECTCONTAINER.setDaemon(True)
+        # self.WSOBJECTCONTAINER = AngelOrderWSV1()
+        # self.WSOBJECTCONTAINER.setDaemon(True)
         # self.WSOBJECTCONTAINER.start()
 
     def __str__(self):
@@ -178,11 +180,11 @@ class Account(object):
 
                 res = self.conn.getresponse()
                 data = res.read()
-            except Exception as e:
-                print(e)
-                retries += 1
+            # except Exception as e:
+            #     print(e)
+            #     retries += 1
 
-            try:
+            # try:
                 print(res.status, data.decode("utf-8"))
                 if res.status == 200:
                     parsedJson = json.loads(data.decode("utf-8"))
@@ -262,13 +264,442 @@ class Account(object):
             self.authStatus = 'Login Error'
 
     def login(self):
-
         if self.broker == 'zerodha':
             self.login_zerodha()
-            pass
         else:
             self.login_angel()
             pass
+
+    def start_thread(self, threaded_queue):
+        if self.authStatus == 'Logged In':
+            self.WSOBJECTCONTAINER = ZerodhaWSV1(
+                self.client_id, self.api_key, self.accountInfo, threaded_queue)
+            self.WSOBJECTCONTAINER.setDaemon(True)
+            self.WSOBJECTCONTAINER.start()
+            pass
+
+    def get_positions(self):
+        if self.broker == 'zerodha':
+            self.get_positions_zerodha()
+
+    def get_positions_zerodha(self):
+        return {
+            "status": "success",
+            "data": {
+                "net": [
+                    {
+                        "tradingsymbol": "TCS23APR3360CE",
+                        "exchange": "MCX",
+                        "instrument_token": 53496327,
+                        "product": "NRML",
+                        "quantity": 175,
+                        "overnight_quantity": 0,
+                        "multiplier": 1000,
+                        "average_price": 161.05,
+                        "close_price": 0,
+                        "last_price": 161.05,
+                        "value": -161050,
+                        "pnl": 0,
+                        "m2m": 0,
+                        "unrealised": 0,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 161.05,
+                        "buy_value": 161050,
+                        "buy_m2m": 161050,
+                        "sell_quantity": 0,
+                        "sell_price": 0,
+                        "sell_value": 0,
+                        "sell_m2m": 0,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 161.05,
+                        "day_buy_value": 161050,
+                        "day_sell_quantity": 0,
+                        "day_sell_price": 0,
+                        "day_sell_value": 0
+                    },
+                    {
+                        "tradingsymbol": "GOLDGUINEA23APRFUT",
+                        "exchange": "MCX",
+                        "instrument_token": 53505799,
+                        "product": "NRML",
+                        "quantity": -32,
+                        "overnight_quantity": 3,
+                        "multiplier": 1,
+                        "average_price": 0,
+                        "close_price": 23232,
+                        "last_price": 23355,
+                        "value": 801,
+                        "pnl": 801,
+                        "m2m": 276,
+                        "unrealised": 801,
+                        "realised": 0,
+                        "buy_quantity": 4,
+                        "buy_price": 23139.75,
+                        "buy_value": 92559,
+                        "buy_m2m": 93084,
+                        "sell_quantity": 4,
+                        "sell_price": 23340,
+                        "sell_value": 93360,
+                        "sell_m2m": 93360,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 23388,
+                        "day_buy_value": 23388,
+                        "day_sell_quantity": 4,
+                        "day_sell_price": 23340,
+                        "day_sell_value": 93360
+                    },
+                    {
+                        "tradingsymbol": "SBIN",
+                        "exchange": "NSE",
+                        "instrument_token": 779521,
+                        "product": "CO",
+                        "quantity": 0,
+                        "overnight_quantity": 0,
+                        "multiplier": 1,
+                        "average_price": 0,
+                        "close_price": 0,
+                        "last_price": 308.4,
+                        "value": -2,
+                        "pnl": -2,
+                        "m2m": -2,
+                        "unrealised": -2,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 311,
+                        "buy_value": 311,
+                        "buy_m2m": 311,
+                        "sell_quantity": 1,
+                        "sell_price": 309,
+                        "sell_value": 309,
+                        "sell_m2m": 309,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 311,
+                        "day_buy_value": 311,
+                        "day_sell_quantity": 1,
+                        "day_sell_price": 309,
+                        "day_sell_value": 309
+                    }
+                ],
+                "day": [
+                    {
+                        "tradingsymbol": "GOLDGUINEA23APRFUT",
+                        "exchange": "MCX",
+                        "instrument_token": 53505799,
+                        "product": "NRML",
+                        "quantity": -32,
+                        "overnight_quantity": 0,
+                        "multiplier": 1,
+                        "average_price": 23340,
+                        "close_price": 23232,
+                        "last_price": 23355,
+                        "value": 69972,
+                        "pnl": -93,
+                        "m2m": -93,
+                        "unrealised": -93,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 23388,
+                        "buy_value": 23388,
+                        "buy_m2m": 23388,
+                        "sell_quantity": 4,
+                        "sell_price": 23340,
+                        "sell_value": 93360,
+                        "sell_m2m": 93360,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 23388,
+                        "day_buy_value": 23388,
+                        "day_sell_quantity": 4,
+                        "day_sell_price": 23340,
+                        "day_sell_value": 93360
+                    },
+                    {
+                        "tradingsymbol": "TCS23APR3360CE",
+                        "exchange": "MCX",
+                        "instrument_token": 53496327,
+                        "product": "NRML",
+                        "quantity": 175,
+                        "overnight_quantity": 0,
+                        "multiplier": 1000,
+                        "average_price": 161.05,
+                        "close_price": 0,
+                        "last_price": 161.05,
+                        "value": -161050,
+                        "pnl": 0,
+                        "m2m": 0,
+                        "unrealised": 0,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 161.05,
+                        "buy_value": 161050,
+                        "buy_m2m": 161050,
+                        "sell_quantity": 0,
+                        "sell_price": 0,
+                        "sell_value": 0,
+                        "sell_m2m": 0,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 161.05,
+                        "day_buy_value": 161050,
+                        "day_sell_quantity": 0,
+                        "day_sell_price": 0,
+                        "day_sell_value": 0
+                    },
+                    {
+                        "tradingsymbol": "SBIN",
+                        "exchange": "NSE",
+                        "instrument_token": 779521,
+                        "product": "CO",
+                        "quantity": 0,
+                        "overnight_quantity": 0,
+                        "multiplier": 1,
+                        "average_price": 0,
+                        "close_price": 0,
+                        "last_price": 308.4,
+                        "value": -2,
+                        "pnl": -2,
+                        "m2m": -2,
+                        "unrealised": -2,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 311,
+                        "buy_value": 311,
+                        "buy_m2m": 311,
+                        "sell_quantity": 1,
+                        "sell_price": 309,
+                        "sell_value": 309,
+                        "sell_m2m": 309,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 311,
+                        "day_buy_value": 311,
+                        "day_sell_quantity": 1,
+                        "day_sell_price": 309,
+                        "day_sell_value": 309
+                    }
+                ]
+            }
+        }
+
+        if self.authStatus == 'Logged In':
+            try:
+                auth_header = self.api_key + ":" + \
+                    self.accountInfo['data']['access_token']
+                self.headers["Authorization"] = "token {}".format(auth_header)
+                self.headers["X-Kite-Version"] = "3"
+                print(self.headers)
+                self.conn.request("GET", constant.GETPOSITIONSZERODHA, {},
+                                  self.headers)
+                res = self.conn.getresponse()
+                data = res.read()
+
+                print(res.status, data.decode("utf-8"))
+                if res.status == 200:
+                    parsedJson = json.loads(data.decode("utf-8"))
+                    if 'errorcode' in parsedJson and parsedJson['errorcode'] != '':
+                        print(parsedJson['errorcode'])
+                    else:
+                        print(parsedJson, 'Final parsed json get_positions_zerodha')
+            except Exception as e:
+                raise print("Couldn't parse the JSON response received from the server: {content}".format(
+                    content=data))
+        else:
+            print('User not logged in ########################################')
+
+    def get_positions_zerodha_update(self):
+        return {
+            "status": "success",
+            "data": {
+                "net": [
+                    {
+                        "tradingsymbol": "LEADED",
+                        "exchange": "MCX",
+                        "instrument_token": 53496327,
+                        "product": "NRML",
+                        "quantity": 1,
+                        "overnight_quantity": 0,
+                        "multiplier": 1000,
+                        "average_price": 161.05,
+                        "close_price": 0,
+                        "last_price": 161.05,
+                        "value": -161050,
+                        "pnl": 0,
+                        "m2m": 0,
+                        "unrealised": 0,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 161.05,
+                        "buy_value": 161050,
+                        "buy_m2m": 161050,
+                        "sell_quantity": 0,
+                        "sell_price": 0,
+                        "sell_value": 0,
+                        "sell_m2m": 0,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 161.05,
+                        "day_buy_value": 161050,
+                        "day_sell_quantity": 0,
+                        "day_sell_price": 0,
+                        "day_sell_value": 0
+                    },
+                    {
+                        "tradingsymbol": "GOLDGUI",
+                        "exchange": "MCX",
+                        "instrument_token": 53505799,
+                        "product": "NRML",
+                        "quantity": 0,
+                        "overnight_quantity": 3,
+                        "multiplier": 1,
+                        "average_price": 0,
+                        "close_price": 23232,
+                        "last_price": 23355,
+                        "value": 801,
+                        "pnl": 801,
+                        "m2m": 276,
+                        "unrealised": 801,
+                        "realised": 0,
+                        "buy_quantity": 4,
+                        "buy_price": 23139.75,
+                        "buy_value": 92559,
+                        "buy_m2m": 93084,
+                        "sell_quantity": 4,
+                        "sell_price": 23340,
+                        "sell_value": 93360,
+                        "sell_m2m": 93360,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 23388,
+                        "day_buy_value": 23388,
+                        "day_sell_quantity": 4,
+                        "day_sell_price": 23340,
+                        "day_sell_value": 93360
+                    },
+                    {
+                        "tradingsymbol": "SBIN",
+                        "exchange": "NSE",
+                        "instrument_token": 779521,
+                        "product": "CO",
+                        "quantity": 0,
+                        "overnight_quantity": 0,
+                        "multiplier": 1,
+                        "average_price": 0,
+                        "close_price": 0,
+                        "last_price": 308.4,
+                        "value": -2,
+                        "pnl": -2,
+                        "m2m": -2,
+                        "unrealised": -2,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 311,
+                        "buy_value": 311,
+                        "buy_m2m": 311,
+                        "sell_quantity": 1,
+                        "sell_price": 309,
+                        "sell_value": 309,
+                        "sell_m2m": 309,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 311,
+                        "day_buy_value": 311,
+                        "day_sell_quantity": 1,
+                        "day_sell_price": 309,
+                        "day_sell_value": 309
+                    }
+                ],
+                "day": [
+                    {
+                        "tradingsymbol": "GOLDGUI",
+                        "exchange": "MCX",
+                        "instrument_token": 53505799,
+                        "product": "NRML",
+                        "quantity": -3,
+                        "overnight_quantity": 0,
+                        "multiplier": 1,
+                        "average_price": 23340,
+                        "close_price": 23232,
+                        "last_price": 23355,
+                        "value": 69972,
+                        "pnl": -93,
+                        "m2m": -93,
+                        "unrealised": -93,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 23388,
+                        "buy_value": 23388,
+                        "buy_m2m": 23388,
+                        "sell_quantity": 4,
+                        "sell_price": 23340,
+                        "sell_value": 93360,
+                        "sell_m2m": 93360,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 23388,
+                        "day_buy_value": 23388,
+                        "day_sell_quantity": 4,
+                        "day_sell_price": 23340,
+                        "day_sell_value": 93360
+                    },
+                    {
+                        "tradingsymbol": "LEADMINI",
+                        "exchange": "MCX",
+                        "instrument_token": 53496327,
+                        "product": "NRML",
+                        "quantity": 1,
+                        "overnight_quantity": 0,
+                        "multiplier": 1000,
+                        "average_price": 161.05,
+                        "close_price": 0,
+                        "last_price": 161.05,
+                        "value": -161050,
+                        "pnl": 0,
+                        "m2m": 0,
+                        "unrealised": 0,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 161.05,
+                        "buy_value": 161050,
+                        "buy_m2m": 161050,
+                        "sell_quantity": 0,
+                        "sell_price": 0,
+                        "sell_value": 0,
+                        "sell_m2m": 0,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 161.05,
+                        "day_buy_value": 161050,
+                        "day_sell_quantity": 0,
+                        "day_sell_price": 0,
+                        "day_sell_value": 0
+                    },
+                    {
+                        "tradingsymbol": "SBIN",
+                        "exchange": "NSE",
+                        "instrument_token": 779521,
+                        "product": "CO",
+                        "quantity": 0,
+                        "overnight_quantity": 0,
+                        "multiplier": 1,
+                        "average_price": 0,
+                        "close_price": 0,
+                        "last_price": 308.4,
+                        "value": -2,
+                        "pnl": -2,
+                        "m2m": -2,
+                        "unrealised": -2,
+                        "realised": 0,
+                        "buy_quantity": 1,
+                        "buy_price": 311,
+                        "buy_value": 311,
+                        "buy_m2m": 311,
+                        "sell_quantity": 1,
+                        "sell_price": 309,
+                        "sell_value": 309,
+                        "sell_m2m": 309,
+                        "day_buy_quantity": 1,
+                        "day_buy_price": 311,
+                        "day_buy_value": 311,
+                        "day_sell_quantity": 1,
+                        "day_sell_price": 309,
+                        "day_sell_value": 309
+                    }
+                ]
+            }
+        }
 
     def get_user_profile(self):
         if self.broker == 'zerodha':
@@ -348,17 +779,18 @@ class Account(object):
         print(self.accountInfo)
 
     def convert_order(self, orderObject):
-        var_zerodha_db = ZerodhaInstruments()
-        instrument_response = var_zerodha_db.get_specific_instruments_data(
+
+        instrument_response = self.zerodha_db.get_specific_instruments_data(
             orderObject['symboltoken'])
         print(instrument_response)
-        
+
         if len(instrument_response) != 0:
             print(instrument_response)
         variety_converter = {
             'NORMAL': 'regular',
             'AMO': 'amo',
-            'STOPLOSS': 'co'
+            'STOPLOSS': 'co',
+            'ICEBERG': 'iceberg'
         }
         ordertype_converter = {
             'MARKET': 'MARKET',
@@ -386,7 +818,10 @@ class Account(object):
             'exchange': orderObject['exchange'],
             'quantity': int(orderObject['quantity']) if (orderObject['quantity'] != '') else 0,
             'transaction_type': orderObject['transactiontype'],
-            'price': float(orderObject['price']) if (orderObject['price'] != '') else 0
+            'price': float(orderObject['price']) if (orderObject['price'] != '') else 0,
+            'trigger_price': float(orderObject['triggerprice']) if (orderObject['triggerprice'] != '') else 0,
+            'iceberg_legs': int(orderObject['iceberg_legs']) if (orderObject['iceberg_legs'] != '') else 0,
+            'iceberg_quantity': int(orderObject['iceberg_quantity']) if (orderObject['iceberg_quantity'] != '') else 0
         }
 
     def place_order(self, orderObject):
@@ -396,6 +831,7 @@ class Account(object):
         order_type(MARKET,LIMIT,SL,SL-M)        -> ordertype(MARKET,LIMIT,STOPLOSS_LIMIT,STOPLOSS_MARKET)
         product(CNC,NRML,MIS)                   -> producttype(DELIVERY,CARRYFORWARD,MARGIN,INTRADAY,BO)
         validity(DAY,IOC,TTL)                   -> duration(DAY,IOC)
+        trigger_price                           -> triggerprice    
         """
         response = ''
         if self.broker == 'zerodha':
@@ -425,12 +861,12 @@ class Account(object):
                 except:
                     print("Error occured")
                     retries += 1
-                    
+
             return 'Error occured'
 
     def place_order_zerodha(self, orderObject):
         convertedOrderObject = self.convert_order(orderObject=orderObject)
-        print(convertedOrderObject, orderObject,'429')
+        print(convertedOrderObject, orderObject, '429')
 
         if self.authStatus == 'Logged In':
             retries = 0
@@ -445,10 +881,22 @@ class Account(object):
                     self.headers["X-Kite-Version"] = "3"
                     order_variety = convertedOrderObject['variety']
                     del convertedOrderObject['variety']
-                    print(self.headers, convertedOrderObject, '392')
+                    # tempOrder = {
+                    #     'type':'single',
+                    #     'condition':json.dumps({
+                    #         "exchange":"NSE", "tradingsymbol":"INFY", "trigger_values":[702.0], "last_price": 798.0
+                    #     }),
+                    #     'orders':json.dumps([
+                    #         {"exchange":"NSE", "tradingsymbol": "INFY", "transaction_type": "BUY", "quantity": 1, "order_type": "LIMIT","product": "CNC", "price": 702.5}])
+                    # }
+                    print(self.headers, "https://api.kite.trade" + constant.PLACEORDERZERODHA +
+                                        '/{0}'.format(order_variety), convertedOrderObject, '392')
                     res = requests.post("https://api.kite.trade" + constant.PLACEORDERZERODHA +
                                         '/{0}'.format(order_variety),
                                         convertedOrderObject, headers=self.headers)
+
+                    # res = requests.post("https://api.kite.trade" + constant.PLACEORDERZERODHAGTT,
+                    #                     tempOrder, headers=self.headers)
                     print(res)
                     print(res.status_code, res.json(), '396')
                     success = True
@@ -456,21 +904,140 @@ class Account(object):
                 except:
                     print("Error occured")
                     retries += 1
-            
+
             return 'Error occured'
 
-    def last_traded_price(self,orderObject):
+    def cancel_order(self, order_id):
+        # convertedOrderObject = self.convert_order(orderObject=orderObject)
+        # print(convertedOrderObject, orderObject, '429')
+
+        if self.authStatus == 'Logged In' and self.broker == 'zerodha':
+            retries = 0
+            success = False
+            while not success and retries < 3:
+                try:
+                    self.headers = {}
+                    auth_header = self.api_key + ":" + \
+                        self.accountInfo['data']['access_token']
+                    self.headers["Authorization"] = "token {}".format(
+                        auth_header)
+                    self.headers["X-Kite-Version"] = "3"
+                    # order_variety = convertedOrderObject['variety']
+                    # del convertedOrderObject['variety']
+
+                    print("https://api.kite.trade" + constant.PLACEORDERZERODHA +
+                          '/regular/{0}'.format(order_id))
+                    res = requests.delete("https://api.kite.trade" + constant.PLACEORDERZERODHA +
+                                          '/regular/{0}'.format(order_id), headers=self.headers)
+
+                    print(res)
+                    print(res.status_code, res.json(), '396')
+                    success = True
+                    return res.json()
+                except Exception as e:
+                    print("Error occured", e)
+                    retries += 1
+
+            return 'Error occured'
+
+    def modify_order(self,order_id,order_object,order_variety):
+        if self.authStatus == 'Logged In' and self.broker == 'zerodha':
+            retries = 0
+            success = False
+            while not success and retries < 3:
+                try:
+                    self.headers = {}
+                    auth_header = self.api_key + ":" + \
+                        self.accountInfo['data']['access_token']
+                    self.headers["Authorization"] = "token {}".format(
+                        auth_header)
+                    self.headers["X-Kite-Version"] = "3"
+                    # tempOrder = {
+                    #     'type':'single',
+                    #     'condition':json.dumps({
+                    #         "exchange":"NSE", "tradingsymbol":"INFY", "trigger_values":[702.0], "last_price": 798.0
+                    #     }),
+                    #     'orders':json.dumps([
+                    #         {"exchange":"NSE", "tradingsymbol": "INFY", "transaction_type": "BUY", "quantity": 1, "order_type": "LIMIT","product": "CNC", "price": 702.5}])
+                    # }
+                    print(self.headers, "https://api.kite.trade" + constant.PLACEORDERZERODHA +
+                                        '/{0}/{1}'.format(order_variety,order_id), order_object, '392')
+                    res = requests.put("https://api.kite.trade" + constant.PLACEORDERZERODHA +
+                                        '/{0}/{1}'.format(order_variety,order_id),
+                                        order_object, headers=self.headers)
+
+                    # res = requests.post("https://api.kite.trade" + constant.PLACEORDERZERODHAGTT,
+                    #                     tempOrder, headers=self.headers)
+                    print(res)
+                    print(res.status_code, res.json(), '396')
+                    success = True
+                    return res.json()
+                except:
+                    print("Error occured")
+                    retries += 1
+
+            return 'Error occured'
+    def last_traded_price(self, instrument,is_symbol_token = True):
         response = 0
         if self.broker == 'zerodha':
-            response = self.ltp_zerodha(orderObject)
+            response = self.ltp_zerodha(instrument,is_symbol_token)
         else:
-            response = self.ltp_angel(orderObject)
+            response = self.ltp_angel(instrument)
+
         return response
 
-    def ltp_zerodha(self,orderObject):
-        pass
+    def ltp_zerodha(self, instrument,is_symbol_token = True):
+        try:
 
-    def ltp_angel(self,orderObject):
+
+            instrument_response = []
+            if is_symbol_token == True:
+                instrument_response = self.zerodha_db.get_specific_instruments_data(
+                instrument[0])
+            else:
+                print(instrument,'interument 998')
+                instrument_response = self.zerodha_db.get_specific_instruments_data_by_tradingsymbol(
+                instrument)
+                print(instrument_response,'interument 998')
+            if len(instrument_response) != 0:
+                print(instrument_response)
+            ltp_order_object = '{0}:{1}'.format(
+                instrument_response[0][11], instrument_response[0][2])
+        except Exception as e:
+            print(e, '495 ltp_zerodha')
+            return 0
+        print(ltp_order_object)
+        if self.authStatus == 'Logged In':
+            retries = 0
+            success = False
+            while not success and retries < 3:
+                try:
+                    self.headers = {}
+                    auth_header = self.api_key + ":" + \
+                        self.accountInfo['data']['access_token']
+                    self.headers["Authorization"] = "token {}".format(
+                        auth_header)
+                    self.headers["X-Kite-Version"] = "3"
+                    res = requests.get("https://api.kite.trade" + constant.GETINSTRUMENTLTPZERODHA +
+                                       '?i={0}'.format(ltp_order_object), headers=self.headers)
+
+                    # res = requests.post("https://api.kite.trade" + constant.PLACEORDERZERODHAGTT,
+                    #                     tempOrder, headers=self.headers)
+                    print(res)
+                    print(res.status_code, res.json(), '396')
+                    success = True
+                    converted_response = res.json()
+                    ltp = 0
+                    if converted_response['status'] == 'success':
+                        ltp = converted_response['data'][ltp_order_object]['last_price']
+                    return ltp
+                except:
+                    print("Error occured")
+                    retries += 1
+
+            return 0
+
+    def ltp_angel(self, orderObject):
         retries = 0
         success = False
         while not success and retries < 3:
@@ -500,7 +1067,7 @@ class Account(object):
         if self.authStatus == 'Logged In' and self.broker == 'zerodha':
             retries = 0
             success = False
-            while not success and retries < 3:
+            while success == False and retries < 3:
                 try:
                     print("https://api.kite.trade" + constant.GENERATESESSIONTOKEN +
                           '?api_key={0}&access_token={1}'.format(self.api_key,
@@ -517,10 +1084,10 @@ class Account(object):
                     # res = self.conn.getresponse()
                     # data = res.read()
                     # print(res.status, data.decode("utf-8"))
-                    if res.status_code.code == 200:
+                    if res.status_code == 200:
                         self.authStatus = 'Logged Out'
                     success = True
-                    return
+                    # return
                 except Exception as e:
                     print("Error occured", e)
                     retries += 1
@@ -539,7 +1106,7 @@ class Account(object):
                                       self.headers)
                     res = self.conn.getresponse()
                     data = res.read()
-                    print(res.status, data.decode("utf-8"),'535')
+                    print(res.status, data.decode("utf-8"), '535')
                     if res.status == 200:
                         self.authStatus = 'Logged Out'
                     success = True
@@ -548,6 +1115,35 @@ class Account(object):
                     print("Error occured", e)
                     retries += 1
         # self.WSOBJECTCONTAINER.close()
+
+    def exit_position(self, orderObject):
+        if self.authStatus == 'Logged In' and self.broker == 'zerodha':
+            retries = 0
+            success = False
+            while not success and retries < 3:
+                try:
+                    self.headers = {}
+                    auth_header = self.api_key + ":" + \
+                        self.accountInfo['data']['access_token']
+                    self.headers["Authorization"] = "token {}".format(
+                        auth_header)
+                    self.headers["X-Kite-Version"] = "3"
+                    order_variety = orderObject['variety']
+                    del orderObject['variety']
+                    print(self.headers, "https://api.kite.trade" + constant.PLACEORDERZERODHA +
+                                        '/{0}'.format(order_variety), orderObject, '392')
+                    res = requests.post("https://api.kite.trade" + constant.PLACEORDERZERODHA +
+                                        '/{0}'.format(order_variety),
+                                        orderObject, headers=self.headers)
+                    print(res)
+                    print(res.status_code, res.json(), '396')
+                    success = True
+                    return res.json()
+                except:
+                    print("Error occured")
+                    retries += 1
+            return 'Error occured'
+
 
     def get_auth_status(self):
         return self.authStatus

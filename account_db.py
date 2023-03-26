@@ -50,7 +50,7 @@ class Account_DB():
                                         api_key TEXT NOT NULL,
                                         secret_key TEXT NOT NULL,
                                         totp_key TEXT NOT NULL,
-                                        broker TEXT
+                                        broker TEXT,
                                         risk TEXT
                                     ); """
                 )
@@ -74,7 +74,7 @@ class Account_DB():
                                         api_key TEXT NOT NULL,
                                         secret_key TEXT NOT NULL,
                                         totp_key TEXT NOT NULL,
-                                        broker TEXT
+                                        broker TEXT,
                                         risk TEXT
                                     ); """
                 )
@@ -99,7 +99,7 @@ class Account_DB():
                                         api_key TEXT NOT NULL,
                                         secret_key TEXT NOT NULL,
                                         totp_key TEXT NOT NULL,
-                                        broker TEXT
+                                        broker TEXT,
                                         risk TEXT
                                     ); """
                 )

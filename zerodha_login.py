@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 import time, pyotp
 import logging
-
+import mintotp
 # logging.basicConfig(level=logging.DEBUG,
 #                     format='(%(threadName)-9s) %(message)s',)
 
@@ -60,8 +60,9 @@ class ZerodhaConnect(threading.Thread):
             totp = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.TAG_NAME,('input'))))
             try:
                 # totp = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="totp"]'))
-                authkey = pyotp.TOTP(self.totp_key)
-                totp.send_keys(authkey.now())
+                # authkey = pyotp.TOTP(self.totp_key)
+                # totp.send_keys(authkey.now())
+                totp.send_keys(mintotp.totp(self.totp_key))
                 #adjustment complete
                 authorize_btn = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH,('//*[@id="container"]/div/div/form/div/button'))))
                 authorize_btn.click()
@@ -165,7 +166,7 @@ class ZerodhaConnectV2():
 
             
             request_token = ''
-            time.sleep(1)
+            time.sleep(3)
             try:
                 url = driver.current_url
                 initial_token = url.split('request_token=')[1]
