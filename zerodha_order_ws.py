@@ -117,9 +117,17 @@ class ZerodhaWSV1(threading.Thread):
             print('An error occured while terminating the connection')
 
     def __on_message(self, ws, message):
-        print('__on_message##################',message)
-        self.threaded_queue.put(self.api_key + '**************')
-        self._parse_text_message(message)
+        print(type(message) != bytes)
+        message = '{"type":"order","id":"","data":{"account_id":"ZL3443","unfilled_quantity":0,"checksum":"","placed_by":"ZL3443","order_id":"230324200948857","exchange_order_id":"2100000024359273","parent_order_id":null,"status":"COMPLETE","status_message":null,"status_message_raw":null,"order_timestamp":"2023-03-24 15:24:36","exchange_update_timestamp":"2023-03-24 15:24:36","exchange_timestamp":"2023-03-24 10:43:29","variety":"regular","exchange":"NFO","tradingsymbol":"TCS23APR3360CE","instrument_token":38196482,"order_type":"LIMIT","transaction_type":"BUY","validity":"DAY","product":"NRML","quantity":175,"disclosed_quantity":0,"price":6.25,"trigger_price":0,"average_price":0,"filled_quantity":0,"pending_quantity":175,"cancelled_quantity":175,"market_protection":0,"meta":{},"tag":null,"guid":"66270XLptJ40MwQGlH"}}'
+        if type(message) != bytes and type(message) is str:
+            message = json.loads(message)
+            if message != None and message.get('type')  and message['type'] == 'order':
+                self.threaded_queue.put(message)    
+        # message = json.loads(message.decode('utf-8'))
+        # print('__on_message##################',message,120,message != None and type(message) is dict and message['type'] == 'order')
+        # if message != None and message.get('type')  and message['type'] == 'order':
+        #     self.threaded_queue.put(message)
+        # self._parse_text_message(message)
 
     def _parse_text_message(self, message):
         print("""Parse text message.""")
