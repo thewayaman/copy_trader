@@ -283,33 +283,36 @@ class Account(object):
             return self.get_positions_zerodha()
 
     def get_positions_zerodha(self):
-   
-        if self.authStatus == 'Logged In':
-            try:
-                auth_header = self.api_key + ":" + \
-                    self.accountInfo['data']['access_token']
-                self.headers["Authorization"] = "token {}".format(auth_header)
-                self.headers["X-Kite-Version"] = "3"
-                print(self.headers)
-                self.conn.request("GET", constant.GETPOSITIONSZERODHA, {},
-                                  self.headers)
-                res = self.conn.getresponse()
-                data = res.read()
+        retries = 0
+        success = False
+        while not success and retries < 3:
+            if self.authStatus == 'Logged In':
+                try:
+                    auth_header = self.api_key + ":" + \
+                        self.accountInfo['data']['access_token']
+                    self.headers["Authorization"] = "token {}".format(auth_header)
+                    self.headers["X-Kite-Version"] = "3"
+                    print(self.headers)
+                    self.conn.request("GET", constant.GETPOSITIONSZERODHA, {},
+                                    self.headers)
+                    res = self.conn.getresponse()
+                    data = res.read()
 
-                print(res.status, data.decode("utf-8"))
-                if res.status == 200:
-                    parsedJson = json.loads(data.decode("utf-8"))
-                    if 'errorcode' in parsedJson and parsedJson['errorcode'] != '':
-                        print(parsedJson['errorcode'])
-                    else:
-                        # print(parsedJson, 'Final parsed json get_positions_zerodha')
-                        pass
-                return parsedJson
-            except Exception as e:
-                raise print("Couldn't parse the JSON response received from the server: {content}".format(
-                    content=data))
-        else:
-            print('User not logged in ########################################')
+                    print(res.status, data.decode("utf-8"))
+                    if res.status == 200:
+                        retries = 5
+                        parsedJson = json.loads(data.decode("utf-8"))
+                        if 'errorcode' in parsedJson and parsedJson['errorcode'] != '':
+                            print(parsedJson['errorcode'])
+                        else:
+                            # print(parsedJson, 'Final parsed json get_positions_zerodha')
+                            pass
+                    return parsedJson
+                except Exception as e:
+                    print("Couldn't parse the JSON response received from the server: {0}")
+                    retries += 1
+            else:
+                print('get_positions_zerodha ########################################')
 
     def get_positions_zerodha_update(self):
         return {
@@ -317,11 +320,11 @@ class Account(object):
             "data": {
                 "net": [
                     {
-                        "tradingsymbol": "TATACOMM23MAR1140PE",
-                        "exchange": "MCX",
+                        "tradingsymbol": "NIFTY23APR15750CE",
+                        "exchange": "NFO",
                         "instrument_token": 53496327,
                         "product": "NRML",
-                        "quantity": 1,
+                        "quantity": 300,
                         "overnight_quantity": 0,
                         "multiplier": 1000,
                         "average_price": 161.05,
@@ -348,8 +351,8 @@ class Account(object):
                         "day_sell_value": 0
                     },
                     {
-                        "tradingsymbol": "ONGC23MAR166CE",
-                        "exchange": "MCX",
+                        "tradingsymbol": "BHARTIARTL23MAY850CE",
+                        "exchange": "NFO",
                         "instrument_token": 53505799,
                         "product": "NRML",
                         "quantity": 0,
@@ -379,11 +382,11 @@ class Account(object):
                         "day_sell_value": 93360
                     },
                     {
-                        "tradingsymbol": "TCS23APR3360CE",
-                        "exchange": "NSE",
+                        "tradingsymbol": "BHEL23APR86PE",
+                        "exchange": "NFO",
                         "instrument_token": 779521,
                         "product": "CO",
-                        "quantity": -32,
+                        "quantity": -21000,
                         "overnight_quantity": 0,
                         "multiplier": 1,
                         "average_price": 0,

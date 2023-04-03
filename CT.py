@@ -143,7 +143,7 @@ class CopyTraderGUI(Frame):
         try:
             # self.res
             task = self.threaded_queue.get(0)
-            print(task, 'result generated',self.threaded_queue.qsize())
+            print(task, 'result generated', self.threaded_queue.qsize())
             is_task_done = False
             if type(task) is dict and task.get('type') and task['type'] == 'order' and task['data']:
                 list_of_orders = self.order_db.get_orders()
@@ -151,36 +151,27 @@ class CopyTraderGUI(Frame):
                     for item in list_of_orders:
                         account_level_orders = json.loads(item[2])
                         for key in account_level_orders.keys():
-                            print(account_level_orders[key]['status'],key)
+                            print(
+                                account_level_orders[key]['status'], key, '####')
                             if account_level_orders != None and account_level_orders[key]['status'] != 'error' and task['data']['account_id'] == key and task['data']['order_id'] == account_level_orders[key]['data']['order_id']:
-                                print(task['data']['account_id'],key,task['data']['order_id'],account_level_orders[key]['data']['order_id'])
+                                print(task['data']['account_id'], key, task['data']
+                                      ['order_id'], account_level_orders[key]['data']['order_id'])
 
-                                self.update_order_status(item[0],key,task['data']['status'])
+                                self.update_order_status(
+                                    item[0], key, task['data']['status'])
                                 if task['data']['status'] == 'COMPLETE':
-                                    self.recreate_open_position_tree_for_account(key)
+                                    self.recreate_open_position_tree_for_account(
+                                        key)
                                 is_task_done = True
             if is_task_done == False:
                 self.threaded_queue.put(task)
 
-
-            if self.Orderframe != None and False:
-                list_of_ancestors = self.Orderframe.winfo_children()
-                if len(list_of_ancestors) > 0:
-                    for item in list_of_ancestors:
-                        list_of_parents = item.winfo_children()
-                        if len(list_of_parents) > 0:
-                            for parent in list_of_parents:
-                                list_of_children = parent.winfo_children()
-                                if len(list_of_children) > 0:
-                                    # for  children in list_of_children:
-                                    print(list_of_children[0]['text'])
-                    print('@@@@@@@@@@@@@@@@@@@@@@@@')
             self.parent.after(500, self.listen_for_result)
         except queue.Empty:
             print('empty queue')
             self.parent.after(1000, self.listen_for_result)
 
-    def simulate_result(self,mock):
+    def simulate_result(self, mock):
         self.threaded_queue.put(mock)
         # self.parent.after(1000, self.simulate_result)
 
@@ -236,7 +227,6 @@ class CopyTraderGUI(Frame):
     def onExitOrderFrameConfigure(self, canvas):
         '''Reset the scroll region to encompass the inner frame'''
         canvas.configure(scrollregion=canvas.bbox("all"))
-    
 
     def place_order(self):
 
@@ -643,25 +633,34 @@ class CopyTraderGUI(Frame):
         self.view_order_win.title('View Orders')
         frame_width = int(
             (self.screen_width)/2)
-        self.positionscreen_button_orders = Frame(self.view_order_win,padx=10,pady=10)
-        refresh_orders = Button(self.positionscreen_button_orders,text='Refresh Orders',command=())
+        self.positionscreen_button_orders = Frame(
+            self.view_order_win, padx=10, pady=10)
+        refresh_orders = Button(
+            self.positionscreen_button_orders, text='Refresh Orders', command=())
         refresh_orders.configure(state='disable')
-        refresh_orders.pack(side=LEFT,fill=NONE)
+        refresh_orders.pack(side=LEFT, fill=NONE)
 
-        add_positions = Button(self.positionscreen_button_orders,text='Add Positions',command=())
+        add_positions = Button(
+            self.positionscreen_button_orders, text='Add Positions', command=())
         add_positions.configure(state='disable')
-        add_positions.pack(side=RIGHT,fill=NONE)
+        add_positions.pack(side=RIGHT, fill=NONE)
 
-        exit_positions = Button(self.positionscreen_button_orders,text='Exit Positions',command=self.execute_position_multiple)
-        exit_positions.configure(state='disable')
-        exit_positions.pack(side=RIGHT,fill=NONE)
+        exit_positions = Button(self.positionscreen_button_orders,
+                                text='Exit Positions', command=self.execute_position_multiple)
+        # exit_positions.configure(state='disable')
+        exit_positions.pack(side=RIGHT, fill=NONE)
 
-        refresh_positions = Button(self.positionscreen_button_orders,text='Refresh Positions',command= lambda : self.recreate_open_position_tree_for_account('ZL3443'))
-        refresh_positions.configure(state='disable')
-        refresh_positions.pack(side=RIGHT,fill=NONE)
+        exit_positions_instruments = Button(
+            self.positionscreen_button_orders, text='Exit Instrument', command=self.excecute_instruments_multiple)
+        # exit_positions.configure(state='disable')
+        exit_positions_instruments.pack(side=RIGHT, fill=NONE)
 
-        self.positionscreen_button_orders.pack(side=TOP,fill=X)
+        refresh_positions = Button(self.positionscreen_button_orders, text='Refresh Positions',
+                                   command=lambda: self.recreate_open_position_tree_for_account('ZL3443'))
+        # refresh_positions.configure(state='disable')
+        refresh_positions.pack(side=RIGHT, fill=NONE)
 
+        self.positionscreen_button_orders.pack(side=TOP, fill=X)
 
         self.runningOrdersFrame = Frame(self.view_order_win,
                                         width=frame_width,
@@ -715,7 +714,6 @@ class CopyTraderGUI(Frame):
             None, 11))
         self.runningOrdersTree.tag_configure('content', font=(
             None, 9))
-        
 
         self.runningOrdersTree.bind(
             '<ButtonRelease-1>', lambda event: self.open_positions_tree_click_event(event, 'orders'))
@@ -725,8 +723,8 @@ class CopyTraderGUI(Frame):
 
         self.openPositionsFrame = Frame(self.view_order_win, width=int(
             (self.screen_width)/2), borderwidth=3, relief=RIDGE)
-            
-        self.openPositionsTree = ttk.Treeview(self.view_order_win, column=('ACCOUNT_NO','PRODUCT', 'QUANTITY','INSTRUMENT', 'TYPE'), show='headings',
+
+        self.openPositionsTree = ttk.Treeview(self.view_order_win, column=('ACCOUNT_NO', 'PRODUCT', 'QUANTITY', 'INSTRUMENT', 'TYPE'), show='headings',
                                               selectmode='extended')
         self.openPositionsTree.heading('ACCOUNT_NO', text='Account No')
         self.openPositionsTree.heading('PRODUCT', text='Product')
@@ -738,23 +736,23 @@ class CopyTraderGUI(Frame):
             pass
         pol = 1
         for account in self.listOfAccounts:
-            if account.authStatus == 'Logged In' :
+            if account.authStatus == 'Logged In':
                 positions = account.get_positions()
 
                 self.openPositionsTree.insert('', 'end', iid=account.client_id, text=pol,
-                                            values=(
-                                                account.client_id), open=True, tags=('order',))
+                                              values=(
+                                                  account.client_id), open=True, tags=('order',))
                 if (type(positions) is dict) and positions.get('status') and positions['status'] == 'success':
                     for position in positions['data']['net']:
                         self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id,
-                                                    tags=('content',),
-                                                    values=(
+                                                      tags=('content',),
+                                                      values=(
                             position['tradingsymbol'],
                             position['product'],
                             position['quantity'],
                             'Add',
                             'Exit'))
-                    
+
                 pol += 1
 
         treeScroll = ttk.Scrollbar(self.openPositionsFrame)
@@ -772,7 +770,8 @@ class CopyTraderGUI(Frame):
     def recreate_running_orders_tree(self):
         list_of_orders_tuples = self.order_db.get_orders()
         if len(self.runningOrdersTree.get_children()) != 0:
-            self.runningOrdersTree.delete(*self.runningOrdersTree.get_children())
+            self.runningOrdersTree.delete(
+                *self.runningOrdersTree.get_children())
 
         pos = 1
         for item in list_of_orders_tuples:
@@ -793,7 +792,6 @@ class CopyTraderGUI(Frame):
                     # 'Unknown'
                     'Modify',
                     'Delete'), open=True, tags=('content',))
-
 
     def open_positions_tree_click_event(self, event, tree_type):
         curItem = ''
@@ -816,24 +814,25 @@ class CopyTraderGUI(Frame):
         if len(curItem['values']) >= column_pure_number:
             print(curItem['values'][column_pure_number - 1])
             selected_cell = curItem['values'][column_pure_number - 1]
-            print(selected_cell,'794 selected')
+            print(selected_cell, '794 selected')
             row_content = row.split('#')
 
             if selected_cell == 'Delete':
                 if curItem['values'][1] == 'CANCELLED' or curItem['values'][1] == 'COMPLETE' or curItem['values'][1] == 'REJECTED':
-                    if showerror('Copy Trader',"Order can't be deleted since its already processed",parent=self.view_order_win) == 'ok':
+                    if showerror('Copy Trader', "Order can't be deleted since its already processed", parent=self.view_order_win) == 'ok':
                         return
 
                 try:
                     exg_order_id = self.find_exchange_order_id(
                         row_content[0], row_content[1])
-                    self.delete_order_single(exg_order_id, row_content[1],row_content[0])
+                    self.delete_order_single(
+                        exg_order_id, row_content[1], row_content[0])
                 except Exception as e:
                     print(e)
                 pass
             elif selected_cell == 'Modify':
                 if curItem['values'][1] == 'CANCELLED' or curItem['values'][1] == 'COMPLETE' or curItem['values'][1] == 'REJECTED':
-                    if showerror('Copy Trader',"Order can't be modified since its already processed",parent=self.view_order_win) == 'ok':
+                    if showerror('Copy Trader', "Order can't be modified since its already processed", parent=self.view_order_win) == 'ok':
                         return
                 try:
                     exg_order_id = self.find_exchange_order_id(
@@ -842,7 +841,7 @@ class CopyTraderGUI(Frame):
                 except Exception as e:
                     print(e)
             elif selected_cell == 'Exit' and abs(int(curItem['values'][2])) != 0:
-                self.exit_position_single(row_content[1],curItem['values'])
+                self.exit_position_single(row_content[1], curItem['values'])
                 pass
 
     def multiply_instrument_lots(self):
@@ -851,49 +850,60 @@ class CopyTraderGUI(Frame):
             self.exit_total_quant.configure(state='normal')
             self.exit_total_quant.delete(0, END)
             self.exit_total_quant.insert(0, int(float(self.exit_quant.get()))
-                             * int(float(self.exit_lot.get())))
+                                         * int(float(self.exit_lot.get())))
             self.exit_total_quant.configure(state='disable')
-    def exit_position_single(self,parent_tree_id,trade_values_array):
-        print(self.openPositionsTree.get_children(parent_tree_id),'MMMMMMMMMM')
+
+    def multiply_instrument_lots_generic(self, exit_quant, exit_total_quant, exit_lot, keychar):
+        if exit_quant.get() != '' and exit_lot.get() != '':
+            print(exit_quant.get(), exit_lot.get(), exit_total_quant)
+            exit_total_quant.configure(state='normal')
+            exit_total_quant.delete(0, END)
+            exit_total_quant.insert(0, int(float(exit_quant.get()))
+                                    * int(float(exit_lot.get())))
+            exit_total_quant.configure(state='disable')
+            print(int(float(exit_quant.get()))
+                  * int(float(exit_lot.get())), exit_total_quant.get())
+
+    def exit_position_single(self, parent_tree_id, trade_values_array):
+        print(self.openPositionsTree.get_children(parent_tree_id), 'MMMMMMMMMM')
         if self.is_singleorder_exit_win_initial_load == False:
             self.single_order_exit_win.destroy()
-            
+
         if self.is_singleorder_exit_win_initial_load == True:
             self.is_singleorder_exit_win_initial_load = False
 
-        self.single_order_exit_win = Toplevel(self, padx=10, width=250,height=190,
-                                               pady=10)
+        self.single_order_exit_win = Toplevel(self, padx=10, width=250, height=190,
+                                              pady=10)
         self.single_order_exit_win.title('Exit ' + trade_values_array[0])
 
         try:
             instrument_response = []
             instrument_response = self.zerodha_db.get_specific_instruments_data_by_tradingsymbol(
-            trade_values_array[0])
-            print(instrument_response,'instrument_response')
+                trade_values_array[0])
+            print(instrument_response, 'instrument_response')
             if len(instrument_response) == 0:
                 print(instrument_response)
-                if showerror('Copy Trader','Instrument does not exist') == 'ok':
+                if showerror('Copy Trader', 'Instrument does not exist') == 'ok':
                     self.single_order_exit_win.destroy()
                     return
         except Exception as e:
             print(e, '495 ltp_zerodha')
             return 0
-        
+
         self.exit_ordertype = StringVar()
         self.exit_ordertype.set('MARKET')
         self.exit_producttype = StringVar()
 
         self.exit_transactiontype = StringVar()
 
-
-        if int(trade_values_array[2])  < 0:
+        if int(trade_values_array[2]) < 0:
             self.exit_transactiontype.set('BUY')
         else:
             self.exit_transactiontype.set('SELL')
 
         buySellFrame = LabelFrame(
             self.single_order_exit_win, height=300, width=100, text='Buy/Sell')
-        buySellFrame.pack(side=TOP,fill=X)
+        buySellFrame.pack(side=TOP, fill=X)
         radio1 = Radiobutton(buySellFrame, text='Buy', command=(
             lambda: self.orderType()), variable=(self.exit_transactiontype), value='BUY')
         radio1.pack(side=LEFT)
@@ -903,37 +913,35 @@ class CopyTraderGUI(Frame):
         radio2.pack(side=LEFT)
         radio2.config(state='disable')
 
-
-
-
-        if trade_values_array[1]  == 'NRML':
-            self.exit_producttype.set('CARRYFORWARD')
-        elif trade_values_array[1]  == 'MIS':
-            self.exit_producttype.set('INTRADAY')
+        # CNC,NRML,MIS
+        if trade_values_array[1] == 'NRML':
+            self.exit_producttype.set('NRML')
+        elif trade_values_array[1] == 'MIS':
+            self.exit_producttype.set('MIS')
         else:
-            self.exit_producttype.set('DELIVERY')
+            self.exit_producttype.set('CNC')
 
-
-        order_type = LabelFrame(self.single_order_exit_win,text='Product type')
+        order_type = LabelFrame(
+            self.single_order_exit_win, text='Product type')
         rad1 = Radiobutton(order_type, text='Market', command=(
             lambda: self.orderType()), variable=(self.exit_ordertype), value='MARKET')
-        rad1.pack(side=LEFT,fill=NONE)
+        rad1.pack(side=LEFT, fill=NONE)
         rad2 = Radiobutton(order_type, text='Limit', command=(
             lambda: self.orderType()), variable=(self.exit_ordertype), value='LIMIT')
-        rad2.pack(side=LEFT,fill=NONE)
-        order_type.pack(side=TOP,fill=X)
+        rad2.pack(side=LEFT, fill=NONE)
+        order_type.pack(side=TOP, fill=X)
 
         producttype = LabelFrame(self.single_order_exit_win,
                                  height=300, width=400, text='Product type')
         producttype.pack(side=TOP, fill=X)
         rad1 = Radiobutton(producttype, text='CNC', command=(
-            lambda: self.orderType()), variable=(self.exit_producttype), value='DELIVERY')
+            lambda: self.orderType()), variable=(self.exit_producttype), value='CNC')
         rad1.pack(side=LEFT)
         rad2 = Radiobutton(producttype, text='NRML', command=(
-            lambda: self.orderType()), variable=(self.exit_producttype), value='CARRYFORWARD')
+            lambda: self.orderType()), variable=(self.exit_producttype), value='NRML')
         rad2.pack(side=LEFT)
         rad3 = Radiobutton(producttype, text='MIS', command=(
-            lambda: self.orderType()), variable=(self.exit_producttype), value='INTRADAY')
+            lambda: self.orderType()), variable=(self.exit_producttype), value='MIS')
         rad3.pack(side=LEFT)
 
         price_combo1 = Frame(self.single_order_exit_win,
@@ -942,8 +950,9 @@ class CopyTraderGUI(Frame):
 
         self.exit_price = Entry(price_combo1, width=10, text='Enter Price')
         self.exit_price.delete(0, END)
-        self.exit_price.insert(0, float(self.get_last_traded_price(trade_values_array[0],False)))
-        
+        self.exit_price.insert(
+            0, float(self.get_last_traded_price(trade_values_array[0], False)))
+
         labP.pack(side=LEFT)
         self.exit_price.pack(side=LEFT)
         price_combo1.pack(side=TOP, fill=X)
@@ -956,48 +965,49 @@ class CopyTraderGUI(Frame):
         labQ.pack(side=LEFT)
         self.exit_quant.pack(side=LEFT)
 
-        
         labM = Label(price_combo2, width=7, text='Lot')
-        
+
         self.exit_lot = Spinbox(price_combo2, from_=0, to=50, values=(0, 10, 20, 30, 40, 50),
-                            width=5, wrap=False,
-                            command=(lambda: self.multiply_instrument_lots()))
-        self.exit_lot.delete(0,END)
-        self.exit_lot.insert(0,abs(int(trade_values_array[2]))/int(instrument_response[0][8]))
-        self.exit_lot.bind('<KeyRelease>', (lambda e: self.multiply_instrument_lots()))
+                                width=5, wrap=False,
+                                command=(lambda: self.multiply_instrument_lots()))
+        self.exit_lot.delete(0, END)
+        self.exit_lot.insert(
+            0, abs(int(trade_values_array[2]))/int(instrument_response[0][8]))
+        self.exit_lot.bind(
+            '<KeyRelease>', (lambda e: self.multiply_instrument_lots()))
         labM.pack(side=LEFT)
         self.exit_lot.pack(side=LEFT)
 
-
         labTQ = Label(price_combo2, width=15, text='Total Quantity')
-        self.exit_total_quant = Entry(price_combo2, width=10, text='Enter Total Quantity')
+        self.exit_total_quant = Entry(
+            price_combo2, width=10, text='Enter Total Quantity')
         self.exit_total_quant.delete(0, END)
-        self.exit_total_quant.insert(0,int(float(self.exit_lot.get())) * int(float(self.exit_quant.get())))
+        self.exit_total_quant.insert(
+            0, int(float(self.exit_lot.get())) * int(float(self.exit_quant.get())))
         self.exit_total_quant.configure(state='disable')
         labTQ.pack(side=LEFT)
         self.exit_total_quant.pack(side=LEFT)
         price_combo2.pack(side=TOP, fill=X)
-        Button(self.single_order_exit_win,text='Exit Position', width=15 ,
-        command=(lambda:self.execute_exit_position(
-            parent_tree_id,
-            {
-                'tradingsymbol':trade_values_array[0],
-                'exchange':instrument_response[0][11],
-                'transaction_type':self.exit_transactiontype.get() ,
-                'order_type':self.exit_ordertype.get(),
-                'quantity':int(float(self.exit_total_quant.get())),
-                'product':self.exit_producttype.get(),
-                'price':float(self.exit_price.get()),
-                'validity':'DAY',
-                'variety':'regular'
-            }
-        ))).pack(side=TOP)
-
+        Button(self.single_order_exit_win, text='Exit Position', width=15,
+               command=(lambda: self.execute_exit_position(
+                   parent_tree_id,
+                   {
+                       'tradingsymbol': trade_values_array[0],
+                       'exchange': instrument_response[0][11],
+                       'transaction_type': self.exit_transactiontype.get(),
+                       'order_type': self.exit_ordertype.get(),
+                       'quantity': int(float(self.exit_total_quant.get())),
+                       'product': self.exit_producttype.get(),
+                       'price': float(self.exit_price.get()),
+                       'validity': 'DAY',
+                       'variety': 'regular'
+                   }
+               ))).pack(side=TOP)
 
     def execute_position_multiple(self):
         print(self.openPositionsTree.selection())
         if len(self.openPositionsTree.selection()) == 0:
-            if showwarning('Copy Trader','No positions selected for execution',parent=self.view_order_win) == 'ok':
+            if showwarning('Copy Trader', 'No positions selected for execution', parent=self.view_order_win) == 'ok':
                 return
         processed_positions = []
 
@@ -1005,12 +1015,13 @@ class CopyTraderGUI(Frame):
             print(type(item.split('#')) is list and len(item.split('#')) > 1)
             processed_arr = item.split('#')
             if type(processed_arr) is list and len(processed_arr) > 1:
-                print(processed_arr,self.openPositionsTree.item(item))
-                processed_positions.append({'account':processed_arr[1],'position':processed_arr[0],'values':self.openPositionsTree.item(item)['values']})
+                print(processed_arr, self.openPositionsTree.item(item))
+                processed_positions.append(
+                    {'account': processed_arr[1], 'position': processed_arr[0], 'values': self.openPositionsTree.item(item)['values']})
 
         if len(processed_positions) == 0:
-            if showwarning('Copy Trader','No positions selected for execution',parent=self.view_order_win) == 'ok':
-                return            
+            if showwarning('Copy Trader', 'No positions selected for execution', parent=self.view_order_win) == 'ok':
+                return
         print(processed_positions)
         form_object = {}
 
@@ -1020,50 +1031,50 @@ class CopyTraderGUI(Frame):
 
                 try:
                     instrument_response = self.zerodha_db.get_specific_instruments_data_by_tradingsymbol(
-                    item['values'][0])
-                    print(instrument_response,'instrument_response')
-                    
+                        item['values'][0])
+                    print(instrument_response, 'instrument_response')
+
                 except Exception as e:
                     print(e, '495 ltp_zerodha')
                     instrument_response = []
                     return 0
 
-
                 if len(instrument_response) == 0:
-                        print(instrument_response)
-                        if showerror('Copy Trader','Instrument does not exist') == 'ok':
-                            self.single_order_exit_win.destroy()
-                            return  
+                    print(instrument_response)
+                    if showerror('Copy Trader', 'Instrument does not exist') == 'ok':
+                        self.single_order_exit_win.destroy()
+                        return
                 print(form_object.get(item['account']))
                 if form_object.get(item['account']) == None:
                     form_object[item['account']] = []
                 temp_var = {
-                    'exit_ordertype':StringVar(value='MARKET'),
-                    'exit_producttype':StringVar(),
-                    'exit_transactiontype':StringVar(),
-                    'quantity':instrument_response[0][8],
+                    'exit_ordertype': StringVar(value='MARKET'),
+                    'exit_producttype': StringVar(),
+                    'exit_transactiontype': StringVar(),
+                    'quantity': instrument_response[0][8],
                     'lots': abs(int(item['values'][2]))/int(instrument_response[0][8]),
-                    'ltp':float(self.get_last_traded_price(item['values'][0],False)),
-                    'instrument':item['values'][0]
+                    'ltp': float(self.get_last_traded_price(item['values'][0], False)),
+                    'instrument': item['values'][0]
                 }
-                
 
-                if int(item['values'][2])  < 0:
+                if int(item['values'][2]) < 0:
                     temp_var['exit_transactiontype'].set('BUY')
                 else:
                     temp_var['exit_transactiontype'].set('SELL')
-
-                if item['values'][1]  == 'NRML':
+                print(temp_var['exit_transactiontype'].get(), '1055')
+                if item['values'][1] == 'NRML':
                     temp_var['exit_producttype'].set('CARRYFORWARD')
-                elif item['values'][1]  == 'MIS':
+                elif item['values'][1] == 'MIS':
                     temp_var['exit_producttype'].set('INTRADAY')
                 else:
                     temp_var['exit_producttype'].set('DELIVERY')
+
+                print(temp_var['exit_producttype'].get(), '1055')
                 form_object[item['account']].append(temp_var)
-       
-            print(form_object,'form KKKk')
-        self.execute_multiple_order_win = Toplevel(self, padx=10, width=650,height=590,
-                                               pady=10)
+
+            # print(form_object,'form KKKk')
+        self.execute_multiple_order_win = Toplevel(self, padx=10, width=650, height=590,
+                                                   pady=10)
         # win.config()
         self.execute_multiple_order_win.pack_propagate(0)
         canvas = Canvas(self.execute_multiple_order_win, borderwidth=0,
@@ -1081,94 +1092,435 @@ class CopyTraderGUI(Frame):
         executionFrame.bind(
             "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
 
-        for key,value in form_object.items():
-                print(value,'\t\n')
-                return
-                account_frame = LabelFrame(
-                    executionFrame, text=str(key), padx=10)
-                account_frame.pack(side=TOP, fill=X)
+        for key, value in form_object.items():
+            # print(value,'\t\n')
+            account_frame = LabelFrame(
+                executionFrame, text=str(key), padx=10)
+            account_frame.pack(side=TOP, fill=X)
+            for form_item in value:
+                # return
+                print(form_item['exit_transactiontype'], '1093',
+                      form_item['exit_transactiontype'].get())
+                order_frame = LabelFrame(
+                    account_frame, text=str(form_item['instrument']), padx=10)
+                order_frame.pack(side=TOP, fill=X)
+
                 buySellFrame = LabelFrame(
-                account_frame, height=300, width=100, text='Buy/Sell')
-                buySellFrame.pack(side=LEFT,fill=NONE)
+                    order_frame, height=300, width=100, text='Buy/Sell')
+                buySellFrame.pack(side=LEFT, fill=NONE)
                 radio1 = Radiobutton(buySellFrame, text='Buy', command=(
-                    lambda: self.orderType()), variable=(value['exit_transactiontype']), value='BUY')
+                    lambda: self.orderType()), variable=form_item['exit_transactiontype'], value='BUY')
                 radio1.pack(side=LEFT)
                 radio1.config(state='disable')
                 radio2 = Radiobutton(buySellFrame, text='Sell', command=(
-                    lambda: self.orderType()), variable=(value['exit_transactiontype']), value='SELL')
+                    lambda: self.orderType()), variable=form_item['exit_transactiontype'], value='SELL')
                 radio2.pack(side=LEFT)
                 radio2.config(state='disable')
 
-
-
-                order_type = LabelFrame(account_frame,text='Product type')
+                order_type = LabelFrame(order_frame, text='Product type')
                 rad1 = Radiobutton(order_type, text='Market', command=(
-                    lambda: self.orderType()), variable=(value['exit_ordertype']), value='MARKET')
-                rad1.pack(side=LEFT,fill=NONE)
+                    lambda: self.orderType()), variable=form_item['exit_ordertype'], value='MARKET')
+                rad1.pack(side=LEFT, fill=NONE)
                 rad2 = Radiobutton(order_type, text='Limit', command=(
-                    lambda: self.orderType()), variable=(value['exit_ordertype']), value='LIMIT')
-                rad2.pack(side=LEFT,fill=NONE)
-                order_type.pack(side=LEFT,fill=NONE)
+                    lambda: self.orderType()), variable=form_item['exit_ordertype'], value='LIMIT')
+                rad2.pack(side=LEFT, fill=NONE)
+                order_type.pack(side=LEFT, fill=NONE)
 
-                producttype = LabelFrame(account_frame,
-                                        height=300, width=400, text='Product type')
+                producttype = LabelFrame(order_frame,
+                                         height=300, width=400, text='Product type')
                 producttype.pack(side=LEFT, fill=NONE)
                 rad1 = Radiobutton(producttype, text='CNC', command=(
-                    lambda: self.orderType()), variable=(value['exit_producttype']), value='DELIVERY')
+                    lambda: self.orderType()), variable=form_item['exit_producttype'], value='DELIVERY')
                 rad1.pack(side=LEFT)
                 rad2 = Radiobutton(producttype, text='NRML', command=(
-                    lambda: self.orderType()), variable=(value['exit_producttype']), value='CARRYFORWARD')
+                    lambda: self.orderType()), variable=form_item['exit_producttype'], value='CARRYFORWARD')
                 rad2.pack(side=LEFT)
                 rad3 = Radiobutton(producttype, text='MIS', command=(
-                    lambda: self.orderType()), variable=(value['exit_producttype']), value='INTRADAY')
+                    lambda: self.orderType()), variable=form_item['exit_producttype'], value='INTRADAY')
                 rad3.pack(side=LEFT)
 
-                price_combo1 = Frame(account_frame,
-                                    height=300, width=100, padx=1, pady=5)
+                price_combo1 = Frame(order_frame,
+                                     height=300, width=100, padx=1, pady=5)
                 labP = Label(price_combo1, width=10, text='Price')
 
-                exit_price = Entry(price_combo1, width=10, text='Enter Price',textvariable=value['ltp'])                
+                exit_price = Entry(
+                    price_combo1, width=10, text='Enter Price', textvariable=form_item['ltp'])
                 labP.pack(side=LEFT)
                 exit_price.pack(side=LEFT)
                 price_combo1.pack(side=LEFT, fill=NONE)
-                price_combo2 = Frame(account_frame,
-                                    height=300, width=100, padx=1, pady=5)
+                price_combo2 = Frame(order_frame,
+                                     height=300, width=100, padx=1, pady=5)
                 labQ = Label(price_combo2, width=10, text='Quantity')
-                exit_quant = Entry(price_combo2, width=10, text='Enter Quantity',textvariable=value['quantity'])
+                exit_quant = Entry(
+                    price_combo2, width=10, text='Enter Quantity', textvariable=form_item['quantity'])
                 labQ.pack(side=LEFT)
                 exit_quant.pack(side=LEFT)
 
-                
                 labM = Label(price_combo2, width=7, text='Lot')
-                
+
                 exit_lot = Spinbox(price_combo2, from_=0, to=50, values=(0, 10, 20, 30, 40, 50),
-                                    width=5, wrap=False,
-                                    command=(lambda: self.multiply_instrument_lots()),textvariable=value['lots'])
-                exit_lot.bind('<KeyRelease>', (lambda e: self.multiply_instrument_lots()))
+                                   width=5, wrap=False,
+                                   command=(lambda: self.multiply_instrument_lots()), textvariable=form_item['lots'])
+                exit_lot.bind('<KeyRelease>',
+                              (lambda e: self.multiply_instrument_lots()))
                 labM.pack(side=LEFT)
                 exit_lot.pack(side=LEFT)
 
-
                 labTQ = Label(price_combo2, width=15, text='Total Quantity')
-                exit_total_quant = Entry(price_combo2, width=10, text='Enter Total Quantity')
+                exit_total_quant = Entry(
+                    price_combo2, width=10, text='Enter Total Quantity')
                 exit_total_quant.configure(state='disable')
                 labTQ.pack(side=LEFT)
                 exit_total_quant.pack(side=LEFT)
                 price_combo2.pack(side=LEFT, fill=NONE)
-        print(form_object)
+        # print(form_object)
 
-    
-    def execute_exit_position(self,account_id,order_object):
+    def excecute_instruments_multiple(self):
+        print(self.openPositionsTree.selection())
+        if len(self.openPositionsTree.selection()) == 0:
+
+            if showwarning('Copy Trader', 'No positions selected for execution', parent=self.view_order_win) == 'ok':
+                return
+        instrument_item = self.openPositionsTree.selection()[0]
+        if type(instrument_item.split('#')) is list and len(instrument_item.split('#')) == 1:
+            return
+        processed_positions = []
+        processed_positions_by_instrument = {}
+        # complete_tree = []
+        selection_tree = []
+        selected_instrument_for_check = instrument_item.split('#')[0]
+        for item in self.openPositionsTree.get_children():
+            print(instrument_item.split('#'), item, 'ERF',
+                  self.openPositionsTree.get_children(item), 'openPositionsTree \n')
+            for child_items in self.openPositionsTree.get_children(item):
+                if selected_instrument_for_check == child_items.split('#')[0]:
+                    selection_tree.append(child_items)
+        # for item in self.openPositionsTree.selection():
+        for item in selection_tree:
+
+            # print(type(item.split('#')) is list and len(item.split('#')) > 1)
+            processed_arr = item.split('#')
+            if type(processed_arr) is list and len(processed_arr) > 1:
+                print(processed_arr, self.openPositionsTree.item(item))
+                processed_positions.append(
+                    {'account': processed_arr[1], 'position': processed_arr[0], 'values': self.openPositionsTree.item(item)['values']})
+                if processed_positions_by_instrument.get(processed_arr[0]):
+                    processed_positions_by_instrument[processed_arr[0]].append({
+                        'account': processed_arr[1], 'values': self.openPositionsTree.item(item)['values']
+                    })
+                else:
+                    processed_positions_by_instrument[processed_arr[0]] = []
+                    processed_positions_by_instrument[processed_arr[0]].append({
+                        'account': processed_arr[1], 'values': self.openPositionsTree.item(item)['values']
+                    })
+        if len(processed_positions) == 0:
+            if showwarning('Copy Trader', 'No positions selected for execution', parent=self.view_order_win) == 'ok':
+                return
+        print(processed_positions_by_instrument)
+        self.form_object_exit = {}
+        form_object_temp = {}
+        for key, values in processed_positions_by_instrument.items():
+            # print(key,values,'processed_positions_by_instrument.items()\n')
+            instrument_response = []
+
+            try:
+                instrument_response = self.zerodha_db.get_specific_instruments_data_by_tradingsymbol(
+                    key)
+                print(instrument_response)
+
+            except Exception as e:
+                print(e, '495 ltp_zerodha')
+                instrument_response = []
+                return 0
+
+            ltp = float(self.get_last_traded_price(key, False))
+            for item in values:
+                if int(item['values'][2]) != 0:
+                    if len(instrument_response) == 0:
+                        # print(instrument_response)
+                        if showerror('Copy Trader', 'Instrument does not exist') == 'ok':
+                            self.single_order_exit_win.destroy()
+                            return
+                    # print(self.form_object_exit.get(key))
+                    if self.form_object_exit.get(key) == None:
+                        self.form_object_exit[key] = []
+                        form_object_temp[key] = []
+
+                    self.form_object_exit[key].append({
+                        'exit_ordertype': StringVar(value='MARKET'),
+                        'exit_producttype': StringVar(),
+                        'exit_transactiontype': StringVar(),
+                        'quantity': StringVar(value=instrument_response[0][8]),
+                        'lots': StringVar(value=str(abs(int(item['values'][2]))/int(instrument_response[0][8]))),
+                        'ltp': StringVar(value=ltp),
+                        'instrument': item['values'][0],
+                        'account': item['account'],
+                        'exchange': instrument_response[0][-1]
+                    })
+                    form_object_temp[key].append({
+                        'exit_ordertype': 'MARKET',
+                        'exit_producttype': '',
+                        'exit_transactiontype': '',
+                        'quantity': instrument_response[0][8],
+                        'lots': int(abs(int(item['values'][2]))/int(instrument_response[0][8])),
+                        'ltp': ltp,
+                        'instrument': item['values'][0],
+                        'account': item['account'],
+                        'total_quantity': item['values'][2],
+                        'exchange': instrument_response[0][-1]
+                    })
+
+                    if int(item['values'][2]) < 0:
+                        self.form_object_exit[key][len(
+                            self.form_object_exit[key]) - 1]['exit_transactiontype'].set('BUY')
+                        form_object_temp[key][len(
+                            self.form_object_exit[key]) - 1]['exit_transactiontype'] = 'BUY'
+                    else:
+                        self.form_object_exit[key][len(
+                            self.form_object_exit[key]) - 1]['exit_transactiontype'].set('SELL')
+                        form_object_temp[key][len(
+                            self.form_object_exit[key]) - 1]['exit_transactiontype'] = 'SELL'
+
+                    # print(temp_var['exit_transactiontype'].get(),'1055')
+                    if item['values'][1] == 'NRML':
+
+                        self.form_object_exit[key][len(
+                            self.form_object_exit[key]) - 1]['exit_producttype'].set('CARRYFORWARD')
+                        form_object_temp[key][len(
+                            self.form_object_exit[key]) - 1]['exit_producttype'] = 'NRML'
+
+                    elif item['values'][1] == 'MIS':
+                        self.form_object_exit[key][len(
+                            self.form_object_exit[key]) - 1]['exit_producttype'].set('INTRADAY')
+                        form_object_temp[key][len(
+                            self.form_object_exit[key]) - 1]['exit_producttype'] = 'MIS'
+
+                    else:
+                        self.form_object_exit[key][len(
+                            self.form_object_exit[key]) - 1]['exit_producttype'].set('DELIVERY')
+                        form_object_temp[key][len(
+                            self.form_object_exit[key]) - 1]['exit_producttype'] = 'CNC'
+
+                    # print(temp_var['exit_producttype'].get(),'1055')
+                    # form_object[key].append(temp_var)
+            # print(len(self.form_object_exit))
+        if len(form_object_temp) > 0:
+
+            self.execute_multiple_order_win = Toplevel(self, padx=10, width=950, height=590,
+                                                       pady=10)
+            # win.config()
+            self.execute_multiple_order_win.pack_propagate(0)
+            execute_button_frame = Frame(
+                self.execute_multiple_order_win, pady=15)
+            execute_button_frame.pack(side=TOP, fill=X)
+            execute_exit_button = Button(execute_button_frame, text='Exit')
+
+            execute_exit_button.pack(side=LEFT, fill=NONE, anchor='e')
+            canvas = Canvas(self.execute_multiple_order_win, borderwidth=0,
+                            background="#e0e0e0", width=915)
+            executionFrame = Frame(
+                canvas, height=300, padx=2)
+            executionFrame.pack(side=TOP, fill=BOTH)
+
+            sbar = Scrollbar(self.execute_multiple_order_win,
+                             orient="vertical", command=(canvas.yview))
+            canvas.configure(yscrollcommand=sbar.set)
+            sbar.pack(side=RIGHT, fill=Y)
+            canvas.pack(side=LEFT, fill=BOTH)
+            canvas.create_window((1, 1), window=executionFrame, anchor="nw")
+            executionFrame.bind(
+                "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
+        self.test_object = StringVar(value='MARKET')
+        self.form_object_consolidate = {}
+        self.form_object_elements = {}
+        print(form_object_temp.keys(), 'all keys here')
+        button_index = 0
+        for key in form_object_temp.keys():
+            # print(value,'\t\n')
+            account_frame = LabelFrame(
+                executionFrame, text=str(key), padx=10, pady=10)
+            account_frame.pack(side=TOP, fill=X)
+
+            for form_item in form_object_temp[key]:
+                self.parent.update()
+                button_index = button_index + 1
+                print(form_item.values(),
+                      'all keys here newest #######################\n')
+
+                keychar = key + '#' + form_item['account']
+                self.form_object_consolidate[keychar] = {}
+                self.form_object_elements[keychar] = []
+                self.form_object_consolidate[keychar]['exit_ordertype'] = StringVar(
+                )
+                self.form_object_consolidate[keychar]['exit_producttype'] = StringVar(
+                )
+                self.form_object_consolidate[keychar]['exit_transactiontype'] = Variable(
+                )
+                self.form_object_consolidate[keychar]['quantity'] = StringVar()
+                self.form_object_consolidate[keychar]['lots'] = StringVar()
+                self.form_object_consolidate[keychar]['ltp'] = StringVar()
+                self.form_object_consolidate[keychar]['instrument'] = form_item['instrument']
+                self.form_object_consolidate[keychar]['account'] = form_item['account']
+                self.form_object_consolidate[keychar]['total_quantity'] = IntVar(
+                )
+
+                self.form_object_consolidate[keychar]['exit_ordertype'].set(
+                    form_item['exit_ordertype'])
+                self.form_object_consolidate[keychar]['exit_producttype'].set(
+                    form_item['exit_producttype'])
+                self.form_object_consolidate[keychar]['exit_transactiontype'].set(
+                    form_item['exit_transactiontype'])
+                self.form_object_consolidate[keychar]['quantity'].set(
+                    form_item['quantity'])
+                self.form_object_consolidate[keychar]['lots'].set(
+                    str(form_item['lots']))
+                self.form_object_consolidate[keychar]['ltp'].set(
+                    form_item['ltp'])
+                self.form_object_consolidate[keychar]['total_quantity'].set(
+                    form_item['total_quantity'])
+                self.form_object_consolidate[keychar]['exchange'] = form_item['exchange']
+
+                order_frame = Frame(account_frame, padx=10)
+                order_frame.pack(side=TOP, fill=X)
+
+                info_label = Label(order_frame, text=str(self.form_object_consolidate[keychar]['account']) + '\t' + self.form_object_consolidate[keychar]['exit_transactiontype'].get()
+                                   + '\t' + self.form_object_consolidate[keychar]['exit_ordertype'].get(), anchor='w')
+                info_label.pack(side=TOP, fill=X)
+
+                order_type_exit = LabelFrame(order_frame, text='Order type')
+                rad1_exit = Radiobutton(order_type_exit, text='Market', var=(
+                    self.form_object_consolidate[keychar]['exit_ordertype']
+                ), value='MARKET')
+                rad1_exit.pack(side=LEFT, fill=NONE)
+                rad2_exit = Radiobutton(order_type_exit, text='Limit', variable=(
+                    self.form_object_consolidate[keychar]['exit_ordertype']), value='LIMIT')
+                rad2_exit.pack(side=LEFT, fill=NONE)
+                order_type_exit.pack(side=LEFT, fill=NONE)
+
+                self.form_object_elements[keychar] = []
+
+                """ price_combo1 = Frame(order_frame,
+                                        height=300, width=100, padx=1, pady=5)
+                    labP = Label(price_combo1, width=10, text='Price')
+                    self.form_object_elements[keychar].append(Entry(price_combo1, width=10, text='Enter Price',textvariable=self.form_object_consolidate[keychar]['ltp']))
+                    labP.pack(side=LEFT)
+                    self.form_object_elements[keychar][-1].pack(side=LEFT)
+                    price_combo1.pack(side=LEFT, fill=NONE) """
+
+                price_combo2 = Frame(order_frame,
+                                     height=300, width=100, padx=1, pady=5)
+                labQ = Label(price_combo2, width=10, text='Quantity')
+                self.form_object_elements[keychar].append(Entry(
+                    price_combo2, width=10, text='Enter Quantity', textvariable=self.form_object_consolidate[keychar]['quantity']))
+                labQ.pack(side=LEFT)
+                self.form_object_elements[keychar][-1].pack(side=LEFT)
+
+                # print(self.form_object_consolidate[keychar]['lots'].get(),'lot size \n')
+                # print(button_index,'button_indexbutton_indexbutton_index',str(self.form_object_consolidate[keychar]['lots'].get()))
+                labM = Label(price_combo2, width=7, text='Lot')
+                self.form_object_elements[keychar].append(Spinbox(price_combo2, from_=0, to=50, values=(0, 10, 20, 30, 40, 50),
+                                                                  width=5, wrap=False
+                                                                  # ,command=(lambda keys=keychar: self.multiply_generic(keys))
+                                                                  ))
+                labM.pack(side=LEFT)
+
+                self.form_object_elements[keychar][-1].pack(side=LEFT)
+                self.form_object_elements[keychar][-1].config(state=NORMAL)
+                self.form_object_elements[keychar][-1].delete(0, END)
+                local_variable = self.form_object_consolidate[keychar]['lots'].get(
+                )
+
+                self.form_object_elements[keychar][-1].insert(
+                    0, local_variable)
+                print(self.form_object_elements[keychar][-1].get(), 'textetextextet >>>',
+                      local_variable, 'x', self.form_object_consolidate[keychar]['lots'].get(), '\n')
+
+                labTQ = Label(price_combo2, width=15, text='Total Quantity')
+                self.form_object_elements[keychar].append(Entry(price_combo2, width=10, text='Enter Total Quantity',
+                                                                textvariable=self.form_object_consolidate[keychar]['total_quantity']))
+                # exit_total_quant = Entry(price_combo2, width=10, text='Enter Total Quantity')
+                self.form_object_elements[keychar][-1].configure(
+                    state='disable')
+                labTQ.pack(side=LEFT)
+                self.form_object_elements[keychar][-1].pack(side=LEFT)
+                price_combo2.pack(side=LEFT, fill=NONE)
+                self.multiply_generic(
+                    keychar, self.form_object_elements[keychar][-1])
+                self.form_object_elements[keychar][1].configure(command=(
+                    lambda keys=keychar, quant_ref=self.form_object_elements[keychar][-1]: self.multiply_generic(keys, quant_ref)))
+                self.form_object_elements[keychar][1].bind('<KeyRelease>', (
+                    lambda e, keys=keychar, quant_ref=self.form_object_elements[keychar][-1]: self.multiply_generic(keys, quant_ref)))
+        execute_exit_button.config(command=self.run_multiple_exit)
+
+    def run_multiple_exit(self):
+        list_of_orders = []
+        post_order_success = {}
+        order_dump = {}
+        for item in self.form_object_elements.keys():
+            account_id = item.split('#')[1]
+            order_object = {
+                'tradingsymbol': item.split('#')[0],
+                'quantity': int(self.form_object_elements[item][-1].get()),
+                'product': self.form_object_consolidate[item]['exit_producttype'].get(),
+                'order_type': self.form_object_consolidate[item]['exit_ordertype'].get(),
+                'transaction_type': self.form_object_consolidate[item]['exit_transactiontype'].get(),
+                'price': float(self.form_object_consolidate[item]['ltp'].get()),
+                'validity': 'DAY',
+                'variety': 'regular',
+                'exchange': self.form_object_consolidate[item]['exchange']
+            }
+            print(list_of_orders)
+
+            for acc in self.listOfAccounts:
+                if acc.client_id == account_id:
+                    post_order_success[acc.client_id] = acc.exit_position(
+                        order_object)
+                    # post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
+                    # if post_order_success[acc.client_id] != None and type(post_order_success[acc.client_id]) is dict and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
+                    #     self.single_order_exit_win.destroy()
+                    #     pass
+                    local_order_insertion_copy = copy.deepcopy(order_object)
+                    # local_order_insertion_copy['variety'] = 'regular'
+                    local_order_insertion_copy['transactiontype'] = local_order_insertion_copy['transaction_type']
+                    local_order_insertion_date = datetime.now().strftime('%m/%d/%Y %H:%M:%S %f')
+                    sql_insertion_dump = {}
+
+                    if post_order_success[acc.client_id] and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
+                        sql_insertion_dump[acc.client_id] = copy.deepcopy(
+                            post_order_success[acc.client_id])
+                        sql_insertion_dump[acc.client_id]['exchange_order_status'] = 'OPEN PENDING'
+                    if len(sql_insertion_dump.keys()) > 0:
+                        self.order_db.insert_order((
+                            local_order_insertion_date,
+                            json.dumps(local_order_insertion_copy),
+                            json.dumps(sql_insertion_dump)
+                        ))
+        # self.loadPositionScreen()
+        self.post_order_execeution_screen(post_order_success, 'Order Screen')
+        self.execute_multiple_order_win.destroy()
+
+    def multiply_generic(self, keychar, exit_total_quant):
+        print(keychar, '<<<<<<<<keychar>>>>>>>')
+        self.multiply_instrument_lots_generic(
+            self.form_object_elements[keychar][0],
+            exit_total_quant,
+            self.form_object_elements[keychar][1],
+            keychar
+        )
+
+    def execute_exit_position(self, account_id, order_object):
         account = ''
         response = ''
         print(order_object)
         post_order_success = {}
         for acc in self.listOfAccounts:
             if acc.client_id == account_id:
-                post_order_success[acc.client_id] = acc.exit_position(order_object)
+                post_order_success[acc.client_id] = acc.exit_position(
+                    order_object)
                 # post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
                 if post_order_success[acc.client_id] != None and type(post_order_success[acc.client_id]) is dict and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
                     self.single_order_exit_win.destroy()
+                    pass
         local_order_insertion_copy = copy.deepcopy(order_object)
         local_order_insertion_copy['variety'] = 'regular'
         local_order_insertion_copy['transactiontype'] = local_order_insertion_copy['transaction_type']
@@ -1187,14 +1539,16 @@ class CopyTraderGUI(Frame):
             ))
             self.loadPositionScreen()
         self.post_order_execeution_screen(post_order_success, 'Order Screen')
+
         # self.recreate_running_orders_tree()
         # self.simulate_result({"type":"order","id":"","data":{"account_id":"ZL3443","unfilled_quantity":0,"checksum":"","placed_by":"ZL3443","order_id":"230324200948857","exchange_order_id":"2100000024359273","parent_order_id":'null',"status":"REJECTED","status_message":'null',"status_message_raw":'null',"order_timestamp":"2023-03-24 15:24:36","exchange_update_timestamp":"2023-03-24 15:24:36","exchange_timestamp":"2023-03-24 10:43:29","variety":"regular","exchange":"NFO","tradingsymbol":"TCS23APR3360CE","instrument_token":38196482,"order_type":"LIMIT","transaction_type":"BUY","validity":"DAY","product":"NRML","quantity":175,"disclosed_quantity":0,"price":6.25,"trigger_price":0,"average_price":0,"filled_quantity":0,"pending_quantity":175,"cancelled_quantity":175,"market_protection":0,"meta":{},"tag":'null',"guid":"66270XLptJ40MwQGlH"}})
 
-    def recreate_open_position_tree_for_account(self,parent_tree_id):
+    def recreate_open_position_tree_for_account(self, parent_tree_id):
 
         if len(self.openPositionsTree.get_children(parent_tree_id)) != 0:
-                self.openPositionsTree.delete(*self.openPositionsTree.get_children(parent_tree_id))
-        
+            self.openPositionsTree.delete(
+                *self.openPositionsTree.get_children(parent_tree_id))
+
         account = ''
         for acc in self.listOfAccounts:
             if acc.client_id == parent_tree_id and acc.authStatus == 'Logged In':
@@ -1204,36 +1558,38 @@ class CopyTraderGUI(Frame):
         if account != '' and type(positions) is dict and positions.get('status') and positions['status'] == 'success':
             for position in positions['data']['net']:
                 self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id,
-                                            tags=('content',),
-                                            values=(
+                                              tags=('content',),
+                                              values=(
                     position['tradingsymbol'],
                     position['product'],
                     position['quantity'],
                     'Add',
                     'Exit'))
+
     def recreate_open_position_tree(self):
         if len(self.openPositionsTree.get_children()) != 0:
-                self.openPositionsTree.delete(*self.openPositionsTree.get_children())
-        
+            self.openPositionsTree.delete(
+                *self.openPositionsTree.get_children())
+
         pol = 1
         for account in self.listOfAccounts:
             if account.authStatus == 'Logged In':
                 positions = account.get_positions()
 
                 self.openPositionsTree.insert('', 'end', iid=account.client_id, text=pol,
-                                            values=(
-                                                account.client_id), open=True, tags=('order',))
+                                              values=(
+                                                  account.client_id), open=True, tags=('order',))
                 if (type(positions) is dict) and positions.get('status') and positions['status'] == 'success':
                     for position in positions['data']['net']:
                         self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id,
-                                                    tags=('content',),
-                                                    values=(
+                                                      tags=('content',),
+                                                      values=(
                             position['tradingsymbol'],
                             position['product'],
                             position['quantity'],
                             'Add',
                             'Exit'))
-                        
+
                 pol += 1
 
     def find_exchange_order_id(self, order_id, account_id):
@@ -1262,7 +1618,7 @@ class CopyTraderGUI(Frame):
                     showinfo(
                         'Copy Trader', 'Please login to delete this order', parent=self.view_order_win)
 
-    def delete_order_single(self, exchange_order_id, account_number,order_id):
+    def delete_order_single(self, exchange_order_id, account_number, order_id):
         if showwarning('Copy Trader', 'Are you sure you want to delete this order?', parent=self.view_order_win) == 'ok':
             print('execute delete')
             is_account_logged_in = False
@@ -1277,7 +1633,8 @@ class CopyTraderGUI(Frame):
                         showinfo('Cancel Order', deletion_response,
                                  parent=self.view_order_win)
                         if deletion_response['status'] == 'success':
-                            self.update_order_status(order_id,account_number,'CANCELLED')
+                            self.update_order_status(
+                                order_id, account_number, 'CANCELLED')
 
                     except Exception as e:
                         print(e)
@@ -1286,22 +1643,22 @@ class CopyTraderGUI(Frame):
 
             if is_account_logged_in == False:
                 showerror(
-                        'Copy Trader',"The account isn't logged in for order deletion", parent=self.view_order_win)
+                    'Copy Trader', "The account isn't logged in for order deletion", parent=self.view_order_win)
 
-    def update_order_status(self, order_id, account_id,status):
+    def update_order_status(self, order_id, account_id, status):
         # exchange_order_id = ''
         list_of_orders = self.order_db.get_order_by_timestamp(order_id)
         if len(list_of_orders) > 0:
             loaded_order_wise_json = json.loads(
                 list_of_orders[0][2])
             loaded_order_json = loaded_order_wise_json[account_id]
-            
+
             loaded_order_json['exchange_order_status'] = status
-            print(status,loaded_order_json['exchange_order_status'],'1149')
-        self.order_db.update_order_status(json.dumps(loaded_order_wise_json),order_id)
+            print(status, loaded_order_json['exchange_order_status'], '1149')
+        self.order_db.update_order_status(
+            json.dumps(loaded_order_wise_json), order_id)
         self.recreate_running_orders_tree()
         # print(loaded_order_wise_json)
-
 
     def modify_order_single(self, exchange_order_id, account_number):
         if self.is_order_modification_win_initial_load == False:
@@ -1318,11 +1675,11 @@ class CopyTraderGUI(Frame):
         order_type = Frame(self.order_modification_win)
         rad1 = Radiobutton(order_type, text='Market', command=(
             lambda: self.orderType()), variable=(self.mod_ordertype), value='MARKET')
-        rad1.pack(side=LEFT,fill=NONE)
+        rad1.pack(side=LEFT, fill=NONE)
         rad2 = Radiobutton(order_type, text='Limit', command=(
             lambda: self.orderType()), variable=(self.mod_ordertype), value='LIMIT')
-        rad2.pack(side=RIGHT,fill=NONE)
-        order_type.pack(side=TOP,fill=X)
+        rad2.pack(side=RIGHT, fill=NONE)
+        order_type.pack(side=TOP, fill=X)
         price_combo1 = Frame(self.order_modification_win,
                              height=300, width=100, padx=1, pady=5)
         labP = Label(price_combo1, width=10, text='Price')
@@ -1333,28 +1690,29 @@ class CopyTraderGUI(Frame):
         price_combo2 = Frame(self.order_modification_win,
                              height=300, width=100, padx=1, pady=5)
         labQ = Label(price_combo2, width=10, text='Quantity')
-        self.modified_quant = Entry(price_combo2, width=10, text='Enter Quantity')
+        self.modified_quant = Entry(
+            price_combo2, width=10, text='Enter Quantity')
         labQ.pack(side=LEFT)
         self.modified_quant.pack(side=RIGHT)
         price_combo2.pack(side=TOP, fill=X)
-        Button(self.order_modification_win,text='Modify Order', width=20 ,command=(lambda: self.modify_order(self.mod_ordertype.get(),
-                                                                               self.modified_price.get(),
-                                                                               quantity=self.modified_quant.get(),
-                                                                               account_number=account_number,
-                                                                               exchange_order_id=exchange_order_id
-                                                                               ))).pack(side=TOP, fill=X)
+        Button(self.order_modification_win, text='Modify Order', width=20, command=(lambda: self.modify_order(self.mod_ordertype.get(),
+                                                                                                              self.modified_price.get(),
+                                                                                                              quantity=self.modified_quant.get(),
+                                                                                                              account_number=account_number,
+                                                                                                              exchange_order_id=exchange_order_id
+                                                                                                              ))).pack(side=TOP, fill=X)
 
     def modify_order(self, order_type, price, quantity, account_number, exchange_order_id):
         order_object = {}
-        
-        print(price,quantity,'1149')
+
+        print(price, quantity, '1149')
         if order_type != None:
             order_object['order_type'] = order_type
         if price != None and price != '' and float(price) != 0:
             order_object['price'] = float(price)
         if quantity != None and quantity != '' and float(quantity) != 0:
             order_object['quantity'] = int(quantity)
-        print(order_object,'order object')
+        print(order_object, 'order object')
         if showwarning('Copy Trader', 'Are you sure you want to modify this order?', parent=self.view_order_win) == 'ok':
             print('execute modify')
             is_account_logged_in = False
@@ -1373,8 +1731,8 @@ class CopyTraderGUI(Frame):
                         showerror(
                             'Copy Trader', 'Something went wrong please try again later', parent=self.view_order_win)
             if is_account_logged_in == False:
-                    showerror(
-                            'Copy Trader',"The account isn't logged in for order modifcation", parent=self.view_order_win)
+                showerror(
+                    'Copy Trader', "The account isn't logged in for order modifcation", parent=self.view_order_win)
 
     def onViewOrderFrameConfigure(self, canvas):
         '''Reset the scroll region to encompass the inner frame'''
@@ -1454,12 +1812,12 @@ class CopyTraderGUI(Frame):
             self.entP.delete(0, END)
             self.entP.insert(0, float(0))
 
-    def get_last_traded_price(self, instrument,is_symbol_token = True):
+    def get_last_traded_price(self, instrument, is_symbol_token=True):
 
         if len(self.listOfAccounts) != 0:
             for acc in self.listOfAccounts:
                 if acc.authStatus == 'Logged In':
-                    return acc.last_traded_price(instrument,is_symbol_token)
+                    return acc.last_traded_price(instrument, is_symbol_token)
             return 0
         else:
             return 0
@@ -1571,15 +1929,15 @@ class CopyTraderGUI(Frame):
         print(title_action, '482')
         win.title(title_action)
         post_execution_tree = ttk.Treeview(win, column=('ITEM', 'VALUE'), show='headings',
-                                              selectmode='extended',height=460)
+                                           selectmode='extended', height=460)
         post_execution_tree.heading('ITEM', text='Item')
         post_execution_tree.heading('VALUE', text='Value')
         pol = 1
         for key, value in accounts_order_object.items():
             post_execution_tree.insert('', 'end', text=pol,
-                                          values=(
-                                              key,value),tags=('order',))
-        post_execution_tree.pack(side=TOP,fill=BOTH)
+                                       values=(
+                                           key, value), tags=('order',))
+        post_execution_tree.pack(side=TOP, fill=BOTH)
 
     def searchInstruments(self):
         # print(self.searchInstrumentItem.get())
@@ -1607,7 +1965,7 @@ class CopyTraderGUI(Frame):
 
     def onQuit(self):
         self.update()
-        if askyesno('PyView', 'Really quit now?'):
+        if askyesno('Copy Trader', 'Are you sure you want to exit?'):
             for item in self.listOfAccounts:
                 if item.is_valid():
                     item.logout()
