@@ -1,5 +1,4 @@
 from tkinter import ttk
-from tkinter import tix
 from requests import get
 import http.client
 import json
@@ -8,10 +7,11 @@ from tkinter import *
 from glob import glob
 from tkinter.messagebox import askyesno, showerror, showwarning, showinfo
 from tkinter.filedialog import askopenfilename
-import random
+
 import socket
 import struct
 import uuid
+import random
 import constant
 from openpyxl import load_workbook
 from account import Account
@@ -63,9 +63,9 @@ class CopyTraderGUI(Frame):
         self.threaded_queue = queue.Queue()
         self.Orderframe = None
         self.parent.after(200, self.listen_for_result)
-        # self.parent.after(400, self.simulate_result)
         self.account_risk_vars = ['Low', 'Medium', 'High']
         self.is_place_order_panel_initial_load = True
+        # self.parent.after(2000, self.simulate_result)
         self.is_view_order_win_initial_load = True
         self.is_order_modification_win_initial_load = True
         self.is_singleorder_exit_win_initial_load = True
@@ -156,10 +156,11 @@ class CopyTraderGUI(Frame):
                             if account_level_orders != None and account_level_orders[key]['status'] != 'error' and task['data']['account_id'] == key and task['data']['order_id'] == account_level_orders[key]['data']['order_id']:
                                 print(task['data']['account_id'], key, task['data']
                                       ['order_id'], account_level_orders[key]['data']['order_id'])
-
                                 self.update_order_status(
-                                    item[0], key, task['data']['status'])
-                                if task['data']['status'] == 'COMPLETE':
+                                    item[0], key, task['data']['status'],'exchange_order_status',False)
+                                self.update_order_status(
+                                    item[0], key, task['data']['filled_quantity'],'fill_quantity')
+                                if task['data']['status'] == 'COMPLETE' or task['data']['status'] == 'UPDATE':
                                     self.recreate_open_position_tree_for_account(
                                         key)
                                 is_task_done = True
@@ -171,9 +172,13 @@ class CopyTraderGUI(Frame):
             print('empty queue')
             self.parent.after(1000, self.listen_for_result)
 
-    def simulate_result(self, mock):
-        self.threaded_queue.put(mock)
-        # self.parent.after(1000, self.simulate_result)
+    def simulate_result(self):
+        self.threaded_queue.put(
+            # json.dumps(
+                {"type":"order","id":"","data":{"account_id":"ZL3443","unfilled_quantity":0,"checksum":"","placed_by":"ZL3443","order_id":"230324202606793","exchange_order_id":"2100000024359273","parent_order_id":'null',"status":"UPDATE","status_message":'null',"status_message_raw":'null',"order_timestamp":"2023-03-24 15:24:36","exchange_update_timestamp":"2023-03-24 15:24:36","exchange_timestamp":"2023-03-24 10:43:29","variety":"regular","exchange":"NFO","tradingsymbol":"TCS23APR3360CE","instrument_token":38196482,"order_type":"LIMIT","transaction_type":"BUY","validity":"DAY","product":"NRML","quantity":175,"disclosed_quantity":0,"price":6.25,"trigger_price":0,"average_price":0,"filled_quantity":random.randint(30,100),"pending_quantity":175,"cancelled_quantity":175,"market_protection":0,"meta":{},"tag":'null',"guid":"66270XLptJ40MwQGlH"}}
+                # )
+                )
+        self.parent.after(2000, self.simulate_result)
 
     def loginTest(self):
 
@@ -640,6 +645,16 @@ class CopyTraderGUI(Frame):
         refresh_orders.configure(state='disable')
         refresh_orders.pack(side=LEFT, fill=NONE)
 
+        modify_orders = Button(
+            self.positionscreen_button_orders, text='Modify Orders', command=self.modify_multiple)
+        # modify_orders.configure(state='disable')
+        modify_orders.pack(side=LEFT, fill=NONE)
+
+        delete_orders = Button(
+            self.positionscreen_button_orders, text='Delete Orders', command=self.delete_multiple)
+        # modify_orders.configure(state='disable')
+        delete_orders.pack(side=LEFT, fill=NONE)
+
         add_positions = Button(
             self.positionscreen_button_orders, text='Add Positions', command=lambda: self.excecute_instruments_multiple('add'))
         # add_positions.configure(state='disable')
@@ -665,8 +680,8 @@ class CopyTraderGUI(Frame):
         self.runningOrdersFrame = Frame(self.view_order_win,
                                         width=frame_width,
                                         borderwidth=1, relief=RIDGE)
-        column_width = int(frame_width/4)
-        self.runningOrdersTree = ttk.Treeview(self.runningOrdersFrame, column=('TIME', 'INSTRUMENT', 'TYPE', 'QUANTITY'), show='headings',
+        column_width = int(frame_width/5)
+        self.runningOrdersTree = ttk.Treeview(self.runningOrdersFrame, column=('TIME', 'INSTRUMENT', 'TYPE', 'QUANTITY','FILL'), show='headings',
                                               selectmode='extended')
         self.runningOrdersTree.heading('TIME', text='Timestamp')
         self.runningOrdersTree.heading('INSTRUMENT', text='Instrument')
@@ -699,11 +714,14 @@ class CopyTraderGUI(Frame):
             pos += 1
             # print(item[0], 'Checker')
             for key in account_level_orders.keys():
+                # fill_string = 
                 self.runningOrdersTree.insert(item[0], 'end', iid=item[0] + '#' + key,
                                               values=(
                     key,
                     account_level_orders[key]['exchange_order_status'] if account_level_orders[key].get(
                         'exchange_order_status') else 'UNKOWN',
+                    '{0}/{1}'.format(account_level_orders[key]['fill_quantity'],account_level_orders[key]['order_quantity']) if account_level_orders[key].get(
+                        'fill_quantity') else 0,
                     # 'Unknown'
                     'Modify',
                     'Delete'), open=True, tags=('content',))
@@ -772,6 +790,8 @@ class CopyTraderGUI(Frame):
         treeScroll.pack(side=RIGHT, fill=Y)
 
     def recreate_running_orders_tree(self):
+        if hasattr(self,'runningOrdersTree') == False:
+            return
         list_of_orders_tuples = self.order_db.get_orders()
         if len(self.runningOrdersTree.get_children()) != 0:
             self.runningOrdersTree.delete(
@@ -793,6 +813,8 @@ class CopyTraderGUI(Frame):
                     key,
                     account_level_orders[key]['exchange_order_status'] if account_level_orders[key].get(
                         'exchange_order_status') else 'UNKOWN',
+                    '{0}/{1}'.format(account_level_orders[key]['fill_quantity'],account_level_orders[key]['order_quantity']) if account_level_orders[key].get(
+                        'fill_quantity') else 0,
                     # 'Unknown'
                     'Modify',
                     'Delete'), open=True, tags=('content',))
@@ -1022,7 +1044,227 @@ class CopyTraderGUI(Frame):
                        'variety': 'regular'
                    }
                ))).pack(side=TOP)
+    def modify_multiple(self):
+        if hasattr(self,'execute_multiple_modify_win'):
+            self.execute_multiple_modify_win.destroy()
 
+        if len(self.runningOrdersTree.selection()) == 0:
+            if showwarning('Copy Trader', 'No orders selected for deletion', parent=self.view_order_win) == 'ok':
+                return
+        selected_orders = {}
+        accounts_by_order_id = {}
+        
+        for item in self.runningOrdersTree.selection():
+            print(item.split('#'),type(item.split('#')) is list and len(item.split('#')) > 1)   
+            # if 'COMPLETE' , CANCELLED, and REJECTED.  
+            if type(item.split('#')) is list and len(item.split('#')) > 1:
+                if item.split('#')[0] not in accounts_by_order_id:
+                    accounts_by_order_id[item.split('#')[0]] = []
+                
+                accounts_by_order_id[item.split('#')[0]].append(item.split('#')[1])
+        print(accounts_by_order_id)       
+        self.execute_multiple_modify_win = Toplevel(self, padx=10, width=815, height=590,
+                                                       pady=10)
+            # win.config()
+        self.execute_multiple_modify_win.pack_propagate(0)
+        delete_button_frame = Frame(
+            self.execute_multiple_modify_win, pady=15)
+        delete_button_frame.pack(side=TOP, fill=X)
+        execute_delete_button = Button(delete_button_frame, text='Modify Orders')
+
+        execute_delete_button.pack(side=LEFT, fill=NONE, anchor='e')
+        canvas = Canvas(self.execute_multiple_modify_win, borderwidth=0,
+                        background="#e0e0e0", width=815)
+        executionFrame = Frame(
+            canvas, height=300, padx=2)
+        executionFrame.pack(side=TOP, fill=BOTH)
+
+        sbar = Scrollbar(self.execute_multiple_modify_win,
+                            orient="vertical", command=(canvas.yview))
+        canvas.configure(yscrollcommand=sbar.set)
+        sbar.pack(side=RIGHT, fill=Y)
+        canvas.pack(side=LEFT, fill=BOTH)
+        canvas.create_window((1, 1), window=executionFrame, anchor="nw")
+        executionFrame.bind(
+            "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
+        exchange_order_ids_by_account = {}
+        self.multiple_mod_form_object_consolidated = {}
+        self.multiple_mod_form_object_price_consolidated = {}
+        if len(accounts_by_order_id.keys()) > 0:
+            for item in accounts_by_order_id.keys():
+                if item not in exchange_order_ids_by_account:
+                    exchange_order_ids_by_account[item] = {}
+                list_of_orders = self.order_db.get_order_by_timestamp(item)              
+                if len(list_of_orders) > 0:
+                    loaded_order_json = json.loads(
+                        list_of_orders[0][2])
+                    trading_symbol = json.loads(
+                        list_of_orders[0][1])['tradingsymbol']
+                    label_frame = LabelFrame(executionFrame,text=item + '\t\t' + trading_symbol)
+                    self.multiple_mod_form_object_price_consolidated[item] = DoubleVar()
+                    price_frame = Frame(label_frame,padx=10)
+                    price_frame.pack(side=TOP,fill=X)
+                    Label(price_frame,text='Price').pack(side=LEFT,fill=NONE)
+                    Entry(price_frame,textvariable=self.multiple_mod_form_object_price_consolidated[item]).pack(side=LEFT,fill=NONE)
+                    check_var = IntVar()
+                    Checkbutton(price_frame,variable=check_var,command=lambda key = item,state = check_var:self.toggleLimitMarket(key,state)).pack(side=LEFT,fill=NONE)
+                    for order in accounts_by_order_id[item]:
+                        if order in loaded_order_json and loaded_order_json[order]['exchange_order_status'] != 'COMPLETE' and loaded_order_json[order]['exchange_order_status'] != 'REJECTED' and loaded_order_json[order]['exchange_order_status'] != 'CANCELLED':
+                            exchange_order_ids_by_account[item][order] = loaded_order_json[order]['data']['order_id']
+                            order_frame = Frame(label_frame,padx=10,pady=5)
+                            Label(order_frame,text=order + '\t\t',anchor='w').pack(side=LEFT,fill=NONE)
+                            account_hash = item+'#'+order+'#'+loaded_order_json[order]['data']['order_id']
+                            self.multiple_mod_form_object_consolidated[account_hash] = {
+                                'quantity': IntVar(value=int(loaded_order_json[order]['order_quantity'])),
+                                'price':IntVar(value=0),
+                                'order_type':StringVar(value='MARKET'),
+                                'trading_symbol':trading_symbol
+                            }
+                            Radiobutton(order_frame,text='Market',variable=self.multiple_mod_form_object_consolidated[account_hash]['order_type'],value='MARKET').pack(side=RIGHT,fill=NONE)
+                            Radiobutton(order_frame,text='Limit',variable=self.multiple_mod_form_object_consolidated[account_hash]['order_type'],value='LIMIT').pack(side=RIGHT,fill=NONE)
+                            Entry(order_frame,textvariable=self.multiple_mod_form_object_consolidated[account_hash]['quantity']).pack(side=RIGHT,fill=NONE)
+                            order_frame.pack(side=TOP,fill=X)
+                    label_frame.pack(side=TOP,fill=X)
+                    print(loaded_order_json,'\n')
+        print(exchange_order_ids_by_account)
+        if len(exchange_order_ids_by_account.values()) == 0:
+            if showwarning('Copy Trader', 'All orders have been processed', parent=self.execute_multiple_modify_win) == 'ok':
+                self.execute_multiple_modify_win.destroy()
+                return
+        execute_delete_button.configure(command=lambda delete_json=exchange_order_ids_by_account:
+        self.run_multiple_modifications(delete_json))
+
+    def run_multiple_modifications(self,executejson):
+        post_order_screens = {}
+        for key in self.multiple_mod_form_object_consolidated.keys():
+            print(key.split('#'))
+            exchange_order_id = key.split('#')[2]
+            account_number = key.split('#')[1]
+            order_object = {
+                'price':self.multiple_mod_form_object_price_consolidated[key.split('#')[0]].get(),
+                'quantity':self.multiple_mod_form_object_consolidated[key]['quantity'].get(),
+                'order_type':self.multiple_mod_form_object_consolidated[key]['order_type'].get()
+            }
+            print(order_object,account_number,exchange_order_id,'\n')
+            for acc in self.listOfAccounts:
+                    # print(acc.client_id,account_number,'delete_order_single')
+                    if acc.client_id == account_number and acc.authStatus == 'Logged In':
+                        print('modify_order', acc)
+                        is_account_logged_in = True
+                        try:
+                            mod_response = acc.modify_order(
+                                exchange_order_id, order_object, 'regular')
+                            post_order_screens[account_number + ' ' + self.multiple_mod_form_object_consolidated[key]['trading_symbol']] = mod_response
+                        except Exception as e:
+                            print(e)
+                            post_order_screens[account_number + ' ' + self.multiple_mod_form_object_consolidated[key]['trading_symbol']] = e
+        self.post_order_execeution_screen(post_order_screens,'Multiple Modifications')                            
+
+
+    def toggleLimitMarket(self,order_id,state):
+        print(state.get())
+        for item in self.multiple_mod_form_object_consolidated.keys():
+            if item.split('#')[0] == order_id:
+                if state.get() == 1:
+                    self.multiple_mod_form_object_consolidated[item]['order_type'].set('LIMIT')
+                else:
+                    self.multiple_mod_form_object_consolidated[item]['order_type'].set('MARKET')
+
+    def delete_multiple(self):
+        if hasattr(self,'execute_multiple_delete_win'):
+            self.execute_multiple_delete_win.destroy()
+        if len(self.runningOrdersTree.selection()) == 0:
+            if showwarning('Copy Trader', 'No orders selected for deletion', parent=self.view_order_win) == 'ok':
+                return
+        selected_orders = {}
+        accounts_by_order_id = {}
+        for item in self.runningOrdersTree.selection():
+            print(item.split('#'),type(item.split('#')) is list and len(item.split('#')) > 1)   
+            # if 'COMPLETE' , CANCELLED, and REJECTED.  
+            if type(item.split('#')) is list and len(item.split('#')) > 1:
+                if item.split('#')[0] not in accounts_by_order_id:
+                    accounts_by_order_id[item.split('#')[0]] = []
+                
+                accounts_by_order_id[item.split('#')[0]].append(item.split('#')[1])
+        print(accounts_by_order_id)       
+        self.execute_multiple_delete_win = Toplevel(self, padx=10, width=815, height=590,
+                                                       pady=10)
+            # win.config()
+        self.execute_multiple_delete_win.pack_propagate(0)
+        delete_button_frame = Frame(
+            self.execute_multiple_delete_win, pady=15)
+        delete_button_frame.pack(side=TOP, fill=X)
+        execute_delete_button = Button(delete_button_frame, text='Delete Orders')
+
+        execute_delete_button.pack(side=LEFT, fill=NONE, anchor='e')
+        canvas = Canvas(self.execute_multiple_delete_win, borderwidth=0,
+                        background="#e0e0e0", width=815)
+        executionFrame = Frame(
+            canvas, height=300, padx=2)
+        executionFrame.pack(side=TOP, fill=BOTH)
+
+        sbar = Scrollbar(self.execute_multiple_delete_win,
+                            orient="vertical", command=(canvas.yview))
+        canvas.configure(yscrollcommand=sbar.set)
+        sbar.pack(side=RIGHT, fill=Y)
+        canvas.pack(side=LEFT, fill=BOTH)
+        canvas.create_window((1, 1), window=executionFrame, anchor="nw")
+        executionFrame.bind(
+            "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
+        exchange_order_ids_by_account = {}
+        if len(accounts_by_order_id.keys()) > 0:
+            for item in accounts_by_order_id.keys():
+                if item not in exchange_order_ids_by_account:
+                    exchange_order_ids_by_account[item] = {}
+                list_of_orders = self.order_db.get_order_by_timestamp(item)              
+                if len(list_of_orders) > 0:
+                    loaded_order_json = json.loads(
+                        list_of_orders[0][2])
+                    trading_symbol = json.loads(
+                        list_of_orders[0][1])
+                    trading_symbol = trading_symbol['tradingsymbol']
+                    label_frame = LabelFrame(executionFrame,text=item + '\t\t' + trading_symbol)
+                    for order in accounts_by_order_id[item]:
+                        if order in loaded_order_json and loaded_order_json[order]['exchange_order_status'] != 'COMPLETE' and loaded_order_json[order]['exchange_order_status'] != 'REJECTED' and loaded_order_json[order]['exchange_order_status'] != 'CANCELLED':
+                            exchange_order_ids_by_account[item][order] = loaded_order_json[order]['data']['order_id']
+                            Label(label_frame,text=order + '\t\t'+ str(loaded_order_json[order]['order_quantity']),anchor='w',padx=10,pady=5).pack(side=TOP,fill=X)
+                    label_frame.pack(side=TOP,fill=X)
+                    print(loaded_order_json,'\n')
+        print(exchange_order_ids_by_account)
+        if len(exchange_order_ids_by_account.values()) == 0:
+            if showwarning('Copy Trader', 'All orders have been processed', parent=self.execute_multiple_delete_win) == 'ok':
+                self.execute_multiple_delete_win.destroy()
+                return
+            
+        execute_delete_button.configure(command= lambda delete_json=exchange_order_ids_by_account:
+        self.run_multiple_delete(delete_json))
+    def run_multiple_delete(self,delete_json):
+        post_order_screen = {}
+        for order_id in delete_json.keys():
+            for account_id in delete_json[order_id]:
+                for acc in self.listOfAccounts:
+                    if acc.client_id == account_id and acc.authStatus == 'Logged In':
+                        # print('delete_order_single', acc)
+                        print('delete_order_single',account_id,delete_json[order_id][account_id])
+
+                        is_account_logged_in = True
+                        try:
+                            deletion_response = acc.cancel_order(delete_json[order_id][account_id])
+                            # showinfo('Cancel Order', deletion_response,
+                            #         parent=self.view_order_win)
+                            if deletion_response != None and deletion_response['status'] == 'success':
+                                self.update_order_status(
+                                    order_id, account_id, 'CANCELLED','exchange_order_status')
+                            post_order_screen[account_id + ' ' + delete_json[order_id][account_id]] = deletion_response
+                        except Exception as e:
+                            print(e)
+                            post_order_screen[account_id + ' ' + delete_json[order_id][account_id]] = e
+                            # showerror(
+                            #     'Copy Trader', 'Something went wrong please try again later', parent=self.view_order_win)
+                    # else:
+                    #     post_order_screen[account_id + ' ' + delete_json[order_id][account_id]] = 'Not logged in'
+                    #     pass
+        self.post_order_execeution_screen(post_order_screen, 'Order Screen')
     def execute_position_multiple(self):
         print(self.openPositionsTree.selection())
         if len(self.openPositionsTree.selection()) == 0:
@@ -1475,6 +1717,8 @@ class CopyTraderGUI(Frame):
         list_of_orders = []
         post_order_success = {}
         order_dump = {}
+        sql_insertion_dump = {}
+
         for item in self.form_object_elements.keys():
             account_id = item.split('#')[1]
             order_object = {
@@ -1490,32 +1734,33 @@ class CopyTraderGUI(Frame):
                 'exchange': self.form_object_consolidate[item]['exchange']
             }
             # print(order_object,'>>>> \n')
-
             for acc in self.listOfAccounts:
                 if acc.client_id == account_id:
                     post_order_success[acc.client_id] = acc.exit_position(
                         order_object)
-                    # post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
+                    post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
                     # if post_order_success[acc.client_id] != None and type(post_order_success[acc.client_id]) is dict and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
                     #     self.single_order_exit_win.destroy()
                     #     pass
                     local_order_insertion_copy = copy.deepcopy(order_object)
                     # local_order_insertion_copy['variety'] = 'regular'
                     local_order_insertion_copy['transactiontype'] = local_order_insertion_copy['transaction_type']
-                    local_order_insertion_date = datetime.now().strftime('%m/%d/%Y %H:%M:%S %f')
-                    sql_insertion_dump = {}
 
                     if post_order_success[acc.client_id] and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
                         sql_insertion_dump[acc.client_id] = copy.deepcopy(
                             post_order_success[acc.client_id])
                         sql_insertion_dump[acc.client_id]['exchange_order_status'] = 'OPEN PENDING'
-                    if len(sql_insertion_dump.keys()) > 0:
-                        self.order_db.insert_order((
-                            local_order_insertion_date,
-                            json.dumps(local_order_insertion_copy),
-                            json.dumps(sql_insertion_dump)
-                        ))
-        # self.loadPositionScreen()
+                        sql_insertion_dump[acc.client_id]['order_quantity'] = int(self.form_object_elements[item][-1].get())
+                        sql_insertion_dump[acc.client_id]['fill_quantity'] = 0
+        local_order_insertion_date = datetime.now().strftime('%d/%m/%Y %H:%M:%S %f')
+        print(json.dumps(sql_insertion_dump))
+        if len(sql_insertion_dump.keys()) > 0:
+            self.order_db.insert_order((
+                local_order_insertion_date,
+                json.dumps(local_order_insertion_copy),
+                json.dumps(sql_insertion_dump)
+            ))
+        self.loadPositionScreen()
         self.post_order_execeution_screen(post_order_success, 'Order Screen')
         self.execute_multiple_order_win.destroy()
 
@@ -1537,20 +1782,22 @@ class CopyTraderGUI(Frame):
             if acc.client_id == account_id:
                 post_order_success[acc.client_id] = acc.exit_position(
                     order_object)
-                # post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
+                post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
                 if post_order_success[acc.client_id] != None and type(post_order_success[acc.client_id]) is dict and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
                     self.single_order_exit_win.destroy()
                     pass
         local_order_insertion_copy = copy.deepcopy(order_object)
         local_order_insertion_copy['variety'] = 'regular'
         local_order_insertion_copy['transactiontype'] = local_order_insertion_copy['transaction_type']
-        local_order_insertion_date = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
+        local_order_insertion_date = datetime.now().strftime('%d/%m/%Y %H:%M:%S %f')
         sql_insertion_dump = {}
         for key in post_order_success.keys():
             if post_order_success.get(key) and (type(post_order_success[key]) is dict) and post_order_success[key].get('status') and post_order_success[key]['status'] == 'success':
                 sql_insertion_dump[key] = copy.deepcopy(
                     post_order_success[key])
                 sql_insertion_dump[key]['exchange_order_status'] = 'OPEN PENDING'
+                sql_insertion_dump[key]['order_quantity'] = int(local_order_insertion_copy['quantity'])
+                sql_insertion_dump[key]['fill_quantity'] = 0
         if len(sql_insertion_dump.keys()) > 0:
             self.order_db.insert_order((
                 local_order_insertion_date,
@@ -1564,7 +1811,8 @@ class CopyTraderGUI(Frame):
         # self.simulate_result({"type":"order","id":"","data":{"account_id":"ZL3443","unfilled_quantity":0,"checksum":"","placed_by":"ZL3443","order_id":"230324200948857","exchange_order_id":"2100000024359273","parent_order_id":'null',"status":"REJECTED","status_message":'null',"status_message_raw":'null',"order_timestamp":"2023-03-24 15:24:36","exchange_update_timestamp":"2023-03-24 15:24:36","exchange_timestamp":"2023-03-24 10:43:29","variety":"regular","exchange":"NFO","tradingsymbol":"TCS23APR3360CE","instrument_token":38196482,"order_type":"LIMIT","transaction_type":"BUY","validity":"DAY","product":"NRML","quantity":175,"disclosed_quantity":0,"price":6.25,"trigger_price":0,"average_price":0,"filled_quantity":0,"pending_quantity":175,"cancelled_quantity":175,"market_protection":0,"meta":{},"tag":'null',"guid":"66270XLptJ40MwQGlH"}})
 
     def recreate_open_position_tree_for_account(self, parent_tree_id):
-
+        if hasattr(self, 'openPositionsTree') == False:
+            return
         if len(self.openPositionsTree.get_children(parent_tree_id)) != 0:
             self.openPositionsTree.delete(
                 *self.openPositionsTree.get_children(parent_tree_id))
@@ -1621,23 +1869,6 @@ class CopyTraderGUI(Frame):
             exchange_order_id = loaded_order_json['data']['order_id']
         return exchange_order_id
 
-    def delete_order_all(self, exchange_order_id):
-        if showwarning('Copy Trader', 'Are you sure you want to delete this order?') == 'ok':
-            print('execute delete')
-            for acc in self.listOfAccounts:
-                if acc.authStatus == 'Logged In':
-                    try:
-                        deletion_response = acc.cancel_order(exchange_order_id)
-                        showinfo('Cancel Order', deletion_response,
-                                 parent=self.view_order_win)
-                    except Exception as e:
-                        print(e)
-                        showerror(
-                            'Copy Trader', 'Something went wrong please try again later')
-                else:
-                    showinfo(
-                        'Copy Trader', 'Please login to delete this order', parent=self.view_order_win)
-
     def delete_order_single(self, exchange_order_id, account_number, order_id):
         if showwarning('Copy Trader', 'Are you sure you want to delete this order?', parent=self.view_order_win) == 'ok':
             print('execute delete')
@@ -1654,7 +1885,7 @@ class CopyTraderGUI(Frame):
                                  parent=self.view_order_win)
                         if deletion_response['status'] == 'success':
                             self.update_order_status(
-                                order_id, account_number, 'CANCELLED')
+                                order_id, account_number, 'CANCELLED','exchange_order_status')
 
                     except Exception as e:
                         print(e)
@@ -1665,19 +1896,20 @@ class CopyTraderGUI(Frame):
                 showerror(
                     'Copy Trader', "The account isn't logged in for order deletion", parent=self.view_order_win)
 
-    def update_order_status(self, order_id, account_id, status):
+    def update_order_status(self, order_id, account_id, status,object_key,recreate = True):
         # exchange_order_id = ''
         list_of_orders = self.order_db.get_order_by_timestamp(order_id)
         if len(list_of_orders) > 0:
             loaded_order_wise_json = json.loads(
                 list_of_orders[0][2])
             loaded_order_json = loaded_order_wise_json[account_id]
-
-            loaded_order_json['exchange_order_status'] = status
-            print(status, loaded_order_json['exchange_order_status'], '1149')
+            if object_key in loaded_order_json :
+                loaded_order_json[object_key] = status
+                print(status, loaded_order_json[object_key], '1149')
         self.order_db.update_order_status(
             json.dumps(loaded_order_wise_json), order_id)
-        self.recreate_running_orders_tree()
+        if recreate :
+            self.recreate_running_orders_tree()
         # print(loaded_order_wise_json)
 
     def modify_order_single(self, exchange_order_id, account_number):
@@ -1922,7 +2154,7 @@ class CopyTraderGUI(Frame):
             return
 
         local_order_insertion_copy = copy.deepcopy(orderObject)
-        local_order_insertion_date = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
+        local_order_insertion_date = datetime.now().strftime('%d/%m/%Y %H:%M:%S %f')
         # order_id TEXT PRIMARY KEY,
         # order_json TEXT NOT 'null',
         # order_collection TEXT NOT NULL
@@ -1932,6 +2164,8 @@ class CopyTraderGUI(Frame):
                 sql_insertion_dump[key] = copy.deepcopy(
                     post_order_success[key])
                 sql_insertion_dump[key]['exchange_order_status'] = 'OPEN PENDING'
+                sql_insertion_dump[key]['order_quantity'] = int(self.form_object_elements[item][-1].get())
+                sql_insertion_dump[key]['fill_quantity'] = 0
         if len(sql_insertion_dump.keys()) > 0:
             self.order_db.insert_order((
                 local_order_insertion_date,
