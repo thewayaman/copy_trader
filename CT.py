@@ -157,7 +157,7 @@ class CopyTraderGUI(Frame):
                                 print(task['data']['account_id'], key, task['data']
                                       ['order_id'], account_level_orders[key]['data']['order_id'])
                                 self.update_order_status(
-                                    item[0], key, task['data']['status'],'exchange_order_status',False)
+                                    item[0], key, task['data']['status'],'exchange_order_status')
                                 self.update_order_status(
                                     item[0], key, task['data']['filled_quantity'],'fill_quantity')
                                 if task['data']['status'] == 'COMPLETE' or task['data']['status'] == 'UPDATE':
@@ -1738,7 +1738,7 @@ class CopyTraderGUI(Frame):
                 if acc.client_id == account_id:
                     post_order_success[acc.client_id] = acc.exit_position(
                         order_object)
-                    post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
+                    # post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
                     # if post_order_success[acc.client_id] != None and type(post_order_success[acc.client_id]) is dict and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
                     #     self.single_order_exit_win.destroy()
                     #     pass
@@ -1782,7 +1782,7 @@ class CopyTraderGUI(Frame):
             if acc.client_id == account_id:
                 post_order_success[acc.client_id] = acc.exit_position(
                     order_object)
-                post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
+                # post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
                 if post_order_success[acc.client_id] != None and type(post_order_success[acc.client_id]) is dict and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
                     self.single_order_exit_win.destroy()
                     pass
@@ -2095,7 +2095,7 @@ class CopyTraderGUI(Frame):
         for item in [k for k in self.instrumentsData if label == k[1]]:
             print(item, '405')
             instrument = item
-
+        order_quantity_by_account = {}
         print('Order :\n  variety = {0}\n  transactiontype = {1}\n  ordertype = {2}\n  producttype = {3} \n  duration = {4} \n  exchange = {5} \n  price = {6} \n  quantity = {7} \n  selected Instrument = {8} \n  symboltoken = {9} \n  tradingsymbol = {10} \n'.format(
             self.variety.get(), self.transactiontype.get(), self.ordertype.get(), self.producttype.get(), self.duration.get(), self.exchange.get(), self.entP.get(), self.entM.get(), instrument[2], instrument[1], instrument[0]))
         orderObject = {
@@ -2131,6 +2131,10 @@ class CopyTraderGUI(Frame):
                             int(round(quantity_panel[acc.client_id].get())) *
                             int(self.entL.get())
                         )
+                        order_quantity_by_account[acc.client_id] = int(
+                            int(round(quantity_panel[acc.client_id].get())) *
+                            int(self.entL.get())
+                        )
                         # print(order_object_copy,'557',quantity_panel[acc.client_id].get(),
                         # int(round(quantity_panel[acc.client_id].get())),int(self.entL.get()),
                         # int(round(quantity_panel[acc.client_id].get())) *
@@ -2142,6 +2146,7 @@ class CopyTraderGUI(Frame):
                         # print(orderObject,'561')
                         post_order_success[acc.client_id] = acc.place_order(
                             orderObject)
+                        order_quantity_by_account[acc.client_id] = int(orderObject['quantity'])
                 else:
                     # post_order_success[acc.client_id] = 'Not logged in to place orders'
                     pass
@@ -2164,7 +2169,7 @@ class CopyTraderGUI(Frame):
                 sql_insertion_dump[key] = copy.deepcopy(
                     post_order_success[key])
                 sql_insertion_dump[key]['exchange_order_status'] = 'OPEN PENDING'
-                sql_insertion_dump[key]['order_quantity'] = int(self.form_object_elements[item][-1].get())
+                sql_insertion_dump[key]['order_quantity'] = int(order_quantity_by_account[key])
                 sql_insertion_dump[key]['fill_quantity'] = 0
         if len(sql_insertion_dump.keys()) > 0:
             self.order_db.insert_order((
