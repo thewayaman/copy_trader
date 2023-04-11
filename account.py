@@ -955,6 +955,43 @@ class Account(object):
             return 'Error occured'
 
 
+    def get_orders(self):
+        if self.broker == 'zerodha':
+            return self.get_orders_zerodha()
+
+    def get_orders_zerodha(self):
+        retries = 0
+        success = False
+        while not success and retries < 3:
+            if self.authStatus == 'Logged In':
+                try:
+                    auth_header = self.api_key + ":" + \
+                        self.accountInfo['data']['access_token']
+                    self.headers["Authorization"] = "token {}".format(auth_header)
+                    self.headers["X-Kite-Version"] = "3"
+                    print(self.headers)
+                    self.conn.request("GET", constant.PLACEORDERZERODHA, {},
+                                    self.headers)
+                    res = self.conn.getresponse()
+                    data = res.read()
+
+                    print(res.status, data.decode("utf-8"))
+                    if res.status == 200:
+                        retries = 5
+                        parsedJson = json.loads(data.decode("utf-8"))
+                        if 'errorcode' in parsedJson and parsedJson['errorcode'] != '':
+                            print(parsedJson['errorcode'])
+                        else:
+                            # print(parsedJson, 'Final parsed json get_positions_zerodha')
+                            pass
+                    return parsedJson
+                except Exception as e:
+                    print("Couldn't parse the JSON response received from the server: {0}")
+                    retries += 1
+            else:
+                print('get_orders_zerodha ########################################')
+
+
     def get_auth_status(self):
         return self.authStatus
 

@@ -62,7 +62,7 @@ class CopyTraderGUI(Frame):
         self.listOfXLSXAccounts = []
         self.threaded_queue = queue.Queue()
         self.Orderframe = None
-        self.parent.after(200, self.listen_for_result)
+        self.parent.after(300, self.listen_for_result)
         self.account_risk_vars = ['Low', 'Medium', 'High']
         self.is_place_order_panel_initial_load = True
         # self.parent.after(2000, self.simulate_result)
@@ -641,8 +641,8 @@ class CopyTraderGUI(Frame):
         self.positionscreen_button_orders = Frame(
             self.view_order_win, padx=10, pady=10)
         refresh_orders = Button(
-            self.positionscreen_button_orders, text='Refresh Orders', command=())
-        refresh_orders.configure(state='disable')
+            self.positionscreen_button_orders, text='Refresh Orders', command=self.refresh_orders)
+        # refresh_orders.configure(state='disable')
         refresh_orders.pack(side=LEFT, fill=NONE)
 
         modify_orders = Button(
@@ -671,7 +671,7 @@ class CopyTraderGUI(Frame):
         exit_positions_instruments.pack(side=RIGHT, fill=NONE)
 
         refresh_positions = Button(self.positionscreen_button_orders, text='Refresh Positions',
-                                   command=lambda: self.recreate_open_position_tree)
+                                   command=self.recreate_open_position_tree)
         # refresh_positions.configure(state='disable')
         refresh_positions.pack(side=RIGHT, fill=NONE)
 
@@ -788,6 +788,44 @@ class CopyTraderGUI(Frame):
             '<ButtonRelease-1>', lambda event: self.open_positions_tree_click_event(event, 'positions'))
         self.openPositionsTree.pack(side=LEFT, fill=BOTH, anchor='ne')
         treeScroll.pack(side=RIGHT, fill=Y)
+
+    def refresh_orders(self):
+        list_of_orders = []
+        is_account_logged_in = False
+        for account in self.listOfAccounts:
+            if account.authStatus == 'Logged In':
+                is_account_logged_in = True
+                try:
+                    orders = account.get_orders()
+                    if orders != None and type(orders) is dict and orders['status'] == 'success':
+                        if len(orders['data']) > 0:
+                            for order in orders['data']:
+                                list_of_orders.append(order)
+                except Exception as e:
+                    print(e,'refresh_orders >>>')
+        if is_account_logged_in == False:
+            showerror('Refresh Orders','No account logged in for refresh',parent=self.view_order_win)
+            return
+        print('\n>>>>>>>>>',list_of_orders,'\n>>>>>>>>>')
+        # if len(list_of_orders) != 0 :
+        #     for order in list_of_orders:
+        #         print(order['order_id'],order['placed_by'],order['status'],order['quantity'],
+        #         order['filled_quantity'],'\n')
+        try : 
+            list_of_orders_tuples = self.order_db.get_orders()
+            if len(list_of_orders_tuples) > 0 and len(list_of_orders) != 0:
+                for order in list_of_orders:
+                    for internal_order in list_of_orders_tuples:
+                        internal_order_object = json.loads(internal_order[2])
+                        if order['placed_by'] in internal_order_object and internal_order_object[order['placed_by']]['data']['order_id'] == order['order_id']:
+                            print(json.loads(internal_order[2]))
+                            self.update_order_status(
+                                                        internal_order[0], order['placed_by'], order['status'],'exchange_order_status',False)
+                            self.update_order_status(
+                                                        internal_order[0], order['placed_by'], order['filled_quantity'],'fill_quantity',False)
+        except Exception as e:
+            print(e)
+        self.recreate_running_orders_tree()
 
     def recreate_running_orders_tree(self):
         if hasattr(self,'runningOrdersTree') == False:
