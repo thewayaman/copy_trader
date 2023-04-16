@@ -901,7 +901,7 @@ class CopyTraderGUI(Frame):
                 try:
                     exg_order_id = self.find_exchange_order_id(
                         row_content[0], row_content[1])
-                    self.modify_order_single(exg_order_id, row_content[1])
+                    self.modify_order_single(exg_order_id, row_content[1],row_content[0])
                 except Exception as e:
                     print(e)
             elif selected_cell == 'Exit' and abs(int(curItem['values'][2])) != 0:
@@ -1152,12 +1152,22 @@ class CopyTraderGUI(Frame):
                             order_frame = Frame(label_frame,padx=10,pady=5)
                             Label(order_frame,text=order + '\t\t',anchor='w').pack(side=LEFT,fill=NONE)
                             account_hash = item+'#'+order+'#'+loaded_order_json[order]['data']['order_id']
-                            self.multiple_mod_form_object_consolidated[account_hash] = {
-                                'quantity': IntVar(value=int(loaded_order_json[order]['order_quantity'])),
-                                'price':IntVar(value=0),
-                                'order_type':StringVar(value='MARKET'),
-                                'trading_symbol':trading_symbol
-                            }
+                            try:
+
+                                self.multiple_mod_form_object_consolidated[account_hash] = {
+                                        'quantity': IntVar(value=int(loaded_order_json[order]['order_quantity']) - int(loaded_order_json[order]['fill_quantity'])),
+                                        'price':IntVar(value=0),
+                                        'order_type':StringVar(value='MARKET'),
+                                        'trading_symbol':trading_symbol
+                                }
+                            except Exception as e:
+                                self.multiple_mod_form_object_consolidated[account_hash] = {
+                                        'quantity': IntVar(value=0),
+                                        'price':IntVar(value=0),
+                                        'order_type':StringVar(value='MARKET'),
+                                        'trading_symbol':trading_symbol
+                                }
+                                print(e)
                             Radiobutton(order_frame,text='Market',variable=self.multiple_mod_form_object_consolidated[account_hash]['order_type'],value='MARKET').pack(side=RIGHT,fill=NONE)
                             Radiobutton(order_frame,text='Limit',variable=self.multiple_mod_form_object_consolidated[account_hash]['order_type'],value='LIMIT').pack(side=RIGHT,fill=NONE)
                             Entry(order_frame,textvariable=self.multiple_mod_form_object_consolidated[account_hash]['quantity']).pack(side=RIGHT,fill=NONE)
@@ -1950,13 +1960,17 @@ class CopyTraderGUI(Frame):
             self.recreate_running_orders_tree()
         # print(loaded_order_wise_json)
 
-    def modify_order_single(self, exchange_order_id, account_number):
+    def modify_order_single(self, exchange_order_id, account_number,time_stamp):
         if self.is_order_modification_win_initial_load == False:
             self.order_modification_win.destroy()
             # self.view_order_win.update()
         if self.is_order_modification_win_initial_load == True:
             self.is_order_modification_win_initial_load = False
 
+
+        list_of_orders = self.order_db.get_order_by_timestamp(time_stamp)              
+        if len(list_of_orders) > 0:
+            loaded_order_json = json.loads(list_of_orders[0][2])
         self.order_modification_win = Toplevel(self, padx=10,
                                                pady=10)
 
@@ -1974,6 +1988,13 @@ class CopyTraderGUI(Frame):
                              height=300, width=100, padx=1, pady=5)
         labP = Label(price_combo1, width=10, text='Price')
         self.modified_price = Entry(price_combo1, width=10, text='Enter Price')
+        try:
+            ltp = float(self.get_last_traded_price(json.loads(
+                        list_of_orders[0][1])['tradingsymbol'], False))
+            self.modified_price.delete(0,END)
+            self.modified_price.insert(0,ltp)
+        except Exception as e:
+            print(e)
         labP.pack(side=LEFT)
         self.modified_price.pack(side=RIGHT)
         price_combo1.pack(side=TOP, fill=X)
@@ -1984,6 +2005,14 @@ class CopyTraderGUI(Frame):
             price_combo2, width=10, text='Enter Quantity')
         labQ.pack(side=LEFT)
         self.modified_quant.pack(side=RIGHT)
+        try:
+            print(loaded_order_json,'test',exchange_order_id)
+            self.modified_quant.delete(0,END)
+            self.modified_quant.insert(0, int(
+                loaded_order_json[account_number]['order_quantity']) 
+                - int(loaded_order_json[account_number]['fill_quantity']))
+        except Exception as e:
+            print(e)
         price_combo2.pack(side=TOP, fill=X)
         Button(self.order_modification_win, text='Modify Order', width=20, command=(lambda: self.modify_order(self.mod_ordertype.get(),
                                                                                                               self.modified_price.get(),
