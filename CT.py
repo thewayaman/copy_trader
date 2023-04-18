@@ -247,7 +247,7 @@ class CopyTraderGUI(Frame):
         self.transactiontype = StringVar()
         self.transactiontype.set('BUY')
         self.ordertype = StringVar()
-        self.ordertype.set('MARKET')
+        self.ordertype.set('LIMIT')
         self.producttype = StringVar()
         self.producttype.set('CARRYFORWARD')
         self.duration = StringVar()
@@ -406,13 +406,13 @@ class CopyTraderGUI(Frame):
             combo_frame1, height=300, width=100, text='Order type')
         orderType.pack(side=LEFT)
         rad1 = Radiobutton(orderType, text='Market', command=(
-            lambda: self.orderType()), variable=(self.ordertype), value='MARKET')
+            lambda: self.orderType()), variable=self.ordertype, value='MARKET')
         rad1.pack(side=LEFT)
         rad2 = Radiobutton(orderType, text='Limit', command=(
-            lambda: self.orderType()), variable=(self.ordertype), value='LIMIT')
+            lambda: self.orderType()), variable=self.ordertype, value='LIMIT')
         rad2.pack(side=LEFT)
         rad2 = Radiobutton(orderType, text='SL', command=(
-            lambda: self.orderType()), variable=(self.ordertype), value='SL')
+            lambda: self.orderType()), variable=self.ordertype, value='SL')
         rad2.pack(side=LEFT)
 
         combo_frame1.pack(side=TOP, fill=X)
@@ -515,9 +515,9 @@ class CopyTraderGUI(Frame):
         labP.pack(side=LEFT)
         self.entP.pack(side=LEFT, padx=4)
         price_combo1.pack(side=TOP, fill=X)
-        self.toggle_iceberg(iceberg_frame, 'disable', account_riskpanel,
-                            account_quantity_panel,
-                            account_risk_setting)
+        # self.toggle_iceberg(iceberg_frame, 'disable', account_riskpanel,
+        #                     account_quantity_panel,
+        #                     account_risk_setting)
         update_price = Button(price_combo1, text='Update Price', command=(
             lambda: self.update_last_traded_price()))
         # cancelBtn = Button(btnsFrame, text='Cancel', command=())
@@ -724,15 +724,28 @@ class CopyTraderGUI(Frame):
                         'fill_quantity') else 0,
                     # 'Unknown'
                     'Modify',
-                    'Delete'), open=True, tags=('content',))
+                    'Delete'), open=True, tags=('content',account_level_orders[key]['exchange_order_status'] if account_level_orders[key].get(
+                        'exchange_order_status') else 'UNKOWN'))
 
         treeScroll = ttk.Scrollbar(self.runningOrdersFrame)
         treeScroll.configure(command=(self.runningOrdersTree.yview))
         self.runningOrdersTree.configure(yscrollcommand=(treeScroll.set))
         self.runningOrdersTree.tag_configure('order', background='#ecf2fe', font=(
             None, 11))
+        # self.runningOrdersTree.tag_configure('order', background='#000000', font=(
+        #     None, 11),foreground='#ffffff')
         self.runningOrdersTree.tag_configure('content', font=(
             None, 9))
+        self.runningOrdersTree.tag_configure('COMPLETE', font=(
+            None, 9),foreground='#33ab07')
+        self.runningOrdersTree.tag_configure('REJECTED', font=(
+            None, 9),foreground='#ab0722')
+        self.runningOrdersTree.tag_configure('UPDATE', font=(
+            None, 9),foreground='#07916a')
+        self.runningOrdersTree.tag_configure('CANCELLED', font=(
+            None, 9),foreground='#ab0722')
+        self.runningOrdersTree.tag_configure('OPEN PENDING', font=(
+            None, 9),foreground='#f58f14')
 
         self.runningOrdersTree.bind(
             '<ButtonRelease-1>', lambda event: self.open_positions_tree_click_event(event, 'orders'))
@@ -766,7 +779,7 @@ class CopyTraderGUI(Frame):
                 if (type(positions) is dict) and positions.get('status') and positions['status'] == 'success':
                     for position in positions['data']['net']:
                         # if len(self.openPositionsTree.get_children(account.client_id)) == 0:
-                            self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id + '#' + position['product'],
+                            self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id + '#' + position['product'] + '#' +position['exchange'],
                                                         tags=('content',),
                                                         values=(
                                 position['tradingsymbol'],
@@ -816,15 +829,21 @@ class CopyTraderGUI(Frame):
             if len(list_of_orders_tuples) > 0 and len(list_of_orders) != 0:
                 for order in list_of_orders:
                     for internal_order in list_of_orders_tuples:
-                        internal_order_object = json.loads(internal_order[2])
-                        if order['placed_by'] in internal_order_object and internal_order_object[order['placed_by']]['data']['order_id'] == order['order_id']:
-                            print(json.loads(internal_order[2]))
-                            self.update_order_status(
-                                                        internal_order[0], order['placed_by'], order['status'],'exchange_order_status',False)
-                            self.update_order_status(
-                                                        internal_order[0], order['placed_by'], order['filled_quantity'],'fill_quantity',False)
+                        try:
+                            internal_order_object = json.loads(internal_order[2])
+                        
+                            # print(order != None and type(order) is dict and (order['placed_by'] in internal_order_object) and internal_order_object[order['placed_by']]['data']['order_id'] != None and internal_order_object[order['placed_by']]['data']['order_id'] == order['order_id'],'820')
+                            
+                            if order != None and type(order) is dict and (order['placed_by'] in internal_order_object) and internal_order_object[order['placed_by']]['data']['order_id'] != None and internal_order_object[order['placed_by']]['data']['order_id'] == order['order_id']:
+                                print(json.loads(internal_order[2]),'823')
+                                self.update_order_status(
+                                                            internal_order[0], order['placed_by'], order['status'],'exchange_order_status',False)
+                                self.update_order_status(
+                                                            internal_order[0], order['placed_by'], order['filled_quantity'],'fill_quantity',False)
+                        except Exception as e:
+                            print(e,'824',order,internal_order_object)
         except Exception as e:
-            print(e)
+            print(e,'831')
         self.recreate_running_orders_tree()
 
     def recreate_running_orders_tree(self):
@@ -855,7 +874,8 @@ class CopyTraderGUI(Frame):
                         'fill_quantity') else 0,
                     # 'Unknown'
                     'Modify',
-                    'Delete'), open=True, tags=('content',))
+                    'Delete'), open=True, tags=('content',account_level_orders[key]['exchange_order_status'] if account_level_orders[key].get(
+                        'exchange_order_status') else 'UNKOWN'))
 
     def open_positions_tree_click_event(self, event, tree_type):
         curItem = ''
@@ -961,7 +981,7 @@ class CopyTraderGUI(Frame):
             return 0
 
         self.exit_ordertype = StringVar()
-        self.exit_ordertype.set('MARKET')
+        self.exit_ordertype.set('LIMIT')
         self.exit_producttype = StringVar()
 
         self.exit_transactiontype = StringVar()
@@ -1157,14 +1177,14 @@ class CopyTraderGUI(Frame):
                                 self.multiple_mod_form_object_consolidated[account_hash] = {
                                         'quantity': IntVar(value=int(loaded_order_json[order]['order_quantity']) - int(loaded_order_json[order]['fill_quantity'])),
                                         'price':IntVar(value=0),
-                                        'order_type':StringVar(value='MARKET'),
+                                        'order_type':StringVar(value='LIMIT'),
                                         'trading_symbol':trading_symbol
                                 }
                             except Exception as e:
                                 self.multiple_mod_form_object_consolidated[account_hash] = {
                                         'quantity': IntVar(value=0),
                                         'price':IntVar(value=0),
-                                        'order_type':StringVar(value='MARKET'),
+                                        'order_type':StringVar(value='LIMIT'),
                                         'trading_symbol':trading_symbol
                                 }
                                 print(e)
@@ -1188,6 +1208,7 @@ class CopyTraderGUI(Frame):
             print(key.split('#'))
             exchange_order_id = key.split('#')[2]
             account_number = key.split('#')[1]
+            order_id = key.split('#')[0]
             order_object = {
                 'price':self.multiple_mod_form_object_price_consolidated[key.split('#')[0]].get(),
                 'quantity':self.multiple_mod_form_object_consolidated[key]['quantity'].get(),
@@ -1203,11 +1224,15 @@ class CopyTraderGUI(Frame):
                             mod_response = acc.modify_order(
                                 exchange_order_id, order_object, 'regular')
                             post_order_screens[account_number + ' ' + self.multiple_mod_form_object_consolidated[key]['trading_symbol']] = mod_response
+                            if mod_response != None and mod_response['status'] == 'success':
+                                self.update_order_status(
+                                            order_id, account_number,int(order_object['quantity']) ,'order_quantity')
                         except Exception as e:
                             print(e)
                             post_order_screens[account_number + ' ' + self.multiple_mod_form_object_consolidated[key]['trading_symbol']] = e
         self.post_order_execeution_screen(post_order_screens,'Multiple Modifications')                            
-
+        if hasattr(self,'execute_multiple_modify_win'):
+            self.execute_multiple_modify_win.destroy()
 
     def toggleLimitMarket(self,order_id,state):
         print(state.get())
@@ -1357,7 +1382,7 @@ class CopyTraderGUI(Frame):
                 if form_object.get(item['account']) == None:
                     form_object[item['account']] = []
                 temp_var = {
-                    'exit_ordertype': StringVar(value='MARKET'),
+                    'exit_ordertype': StringVar(value='LIMIT'),
                     'exit_producttype': StringVar(),
                     'exit_transactiontype': StringVar(),
                     'quantity': instrument_response[0][8],
@@ -1559,7 +1584,7 @@ class CopyTraderGUI(Frame):
                         form_object_temp[key] = []
 
                     form_object_temp[key].append({
-                        'exit_ordertype': 'MARKET',
+                        'exit_ordertype': 'LIMIT',
                         'exit_producttype': '',
                         'exit_transactiontype': '',
                         'quantity': instrument_response[0][8],
@@ -1617,7 +1642,7 @@ class CopyTraderGUI(Frame):
             canvas.create_window((1, 1), window=executionFrame, anchor="nw")
             executionFrame.bind(
                 "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
-        self.test_object = StringVar(value='MARKET')
+        self.test_object = StringVar(value='LIMIT')
         self.form_object_consolidate = {}
         self.form_object_elements = {}
         self.form_object_price_elements = {}
@@ -1645,7 +1670,7 @@ class CopyTraderGUI(Frame):
                 print(form_item.values(),
                       'all keys here newest #######################\n')
 
-                keychar = key + '#' + form_item['account']
+                keychar = key + '#' + form_item['account'] + '#' + form_item['exit_producttype']
                 self.form_object_consolidate[keychar] = {}
                 self.form_object_elements[keychar] = []
                 self.form_object_consolidate[keychar]['exit_ordertype'] = StringVar(
@@ -1765,8 +1790,8 @@ class CopyTraderGUI(Frame):
         list_of_orders = []
         post_order_success = {}
         order_dump = {}
-        sql_insertion_dump = {}
-
+        sql_insertion_dump_mis = {}
+        sql_insertion_dump_nrml = {}
         for item in self.form_object_elements.keys():
             account_id = item.split('#')[1]
             order_object = {
@@ -1784,8 +1809,10 @@ class CopyTraderGUI(Frame):
             # print(order_object,'>>>> \n')
             for acc in self.listOfAccounts:
                 if acc.client_id == account_id:
-                    post_order_success[acc.client_id] = acc.exit_position(
+                    
+                    local_response = acc.exit_position(
                         order_object)
+                    post_order_success[acc.client_id + '\t'+ order_object['product']] = copy.deepcopy(local_response)
                     # post_order_success[acc.client_id] = {'status': 'success', 'data': {'order_id': '230324202606793'}}
                     # if post_order_success[acc.client_id] != None and type(post_order_success[acc.client_id]) is dict and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
                     #     self.single_order_exit_win.destroy()
@@ -1794,19 +1821,36 @@ class CopyTraderGUI(Frame):
                     # local_order_insertion_copy['variety'] = 'regular'
                     local_order_insertion_copy['transactiontype'] = local_order_insertion_copy['transaction_type']
 
-                    if post_order_success[acc.client_id] and post_order_success[acc.client_id].get('status') and post_order_success[acc.client_id]['status'] == 'success':
-                        sql_insertion_dump[acc.client_id] = copy.deepcopy(
-                            post_order_success[acc.client_id])
-                        sql_insertion_dump[acc.client_id]['exchange_order_status'] = 'OPEN PENDING'
-                        sql_insertion_dump[acc.client_id]['order_quantity'] = int(self.form_object_elements[item][-1].get())
-                        sql_insertion_dump[acc.client_id]['fill_quantity'] = 0
+                    if local_response != None and type(local_response) is dict and local_response.get('status') and local_response['status'] == 'success':
+                        if order_object['product'] == 'NRML':
+                            sql_insertion_dump_nrml[acc.client_id] = copy.deepcopy(
+                                local_response)
+                            sql_insertion_dump_nrml[acc.client_id]['exchange_order_status'] = 'OPEN PENDING'
+                            sql_insertion_dump_nrml[acc.client_id]['order_quantity'] = int(self.form_object_elements[item][-1].get())
+                            sql_insertion_dump_nrml[acc.client_id]['fill_quantity'] = 0
+                        elif order_object['product'] == 'MIS':
+                            sql_insertion_dump_mis[acc.client_id] = copy.deepcopy(
+                                local_response)
+                            sql_insertion_dump_mis[acc.client_id]['exchange_order_status'] = 'OPEN PENDING'
+                            sql_insertion_dump_mis[acc.client_id]['order_quantity'] = int(self.form_object_elements[item][-1].get())
+                            sql_insertion_dump_mis[acc.client_id]['fill_quantity'] = 0
         local_order_insertion_date = datetime.now().strftime('%d/%m/%Y %H:%M:%S %f')
-        print(json.dumps(sql_insertion_dump))
-        if len(sql_insertion_dump.keys()) > 0:
+        print(json.dumps(sql_insertion_dump_nrml))
+        if len(sql_insertion_dump_nrml.keys()) > 0:
+            local_order_insertion_copy['product'] = 'NRML'
             self.order_db.insert_order((
                 local_order_insertion_date,
                 json.dumps(local_order_insertion_copy),
-                json.dumps(sql_insertion_dump)
+                json.dumps(sql_insertion_dump_nrml)
+            ))
+        local_order_insertion_date = datetime.now().strftime('%d/%m/%Y %H:%M:%S %f')
+        
+        if len(sql_insertion_dump_mis.keys()) > 0:
+            local_order_insertion_copy['product'] = 'MIS'
+            self.order_db.insert_order((
+                local_order_insertion_date,
+                json.dumps(local_order_insertion_copy),
+                json.dumps(sql_insertion_dump_mis)
             ))
         self.loadPositionScreen()
         self.post_order_execeution_screen(post_order_success, 'Order Screen')
@@ -1873,7 +1917,7 @@ class CopyTraderGUI(Frame):
         print(type(positions) is dict)
         if account != '' and type(positions) is dict and positions.get('status') and positions['status'] == 'success':
             for position in positions['data']['net']:
-                self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id + '#' + position['product'],
+                self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id + '#' + position['product'] + '#' +position['exchange'],
                                               tags=('content',),
                                               values=(
                     position['tradingsymbol'],
@@ -1897,7 +1941,7 @@ class CopyTraderGUI(Frame):
                                                 account.client_id), open=True, tags=('order',))
                 if (type(positions) is dict) and positions.get('status') and positions['status'] == 'success':
                     for position in positions['data']['net']:
-                        self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id + '#' + position['product'],
+                        self.openPositionsTree.insert(account.client_id, 'end', iid=position['tradingsymbol'] + '#' + account.client_id + '#' + position['product'] + '#' +position['exchange'],
                                                     tags=('content',),
                                                     values=(
                             position['tradingsymbol'],
@@ -1975,7 +2019,7 @@ class CopyTraderGUI(Frame):
                                                pady=10)
 
         self.mod_ordertype = StringVar()
-        self.mod_ordertype.set('MARKET')
+        self.mod_ordertype.set('LIMIT')
         order_type = Frame(self.order_modification_win)
         rad1 = Radiobutton(order_type, text='Market', command=(
             lambda: self.orderType()), variable=(self.mod_ordertype), value='MARKET')
@@ -2018,10 +2062,11 @@ class CopyTraderGUI(Frame):
                                                                                                               self.modified_price.get(),
                                                                                                               quantity=self.modified_quant.get(),
                                                                                                               account_number=account_number,
-                                                                                                              exchange_order_id=exchange_order_id
+                                                                                                              exchange_order_id=exchange_order_id,
+                                                                                                              time_stamp=time_stamp
                                                                                                               ))).pack(side=TOP, fill=X)
 
-    def modify_order(self, order_type, price, quantity, account_number, exchange_order_id):
+    def modify_order(self, order_type, price, quantity, account_number, exchange_order_id,time_stamp):
         order_object = {}
 
         print(price, quantity, '1149')
@@ -2045,6 +2090,10 @@ class CopyTraderGUI(Frame):
                             exchange_order_id, order_object, 'regular')
                         showinfo('Modify Order', mod_response,
                                  parent=self.view_order_win)
+                        if mod_response != None and mod_response['status'] == 'success':
+                            self.update_order_status(
+                                            time_stamp, account_number,int(order_object['quantity']) ,'order_quantity')
+                            self.order_modification_win.destroy()
                     except Exception as e:
                         print(e)
                         showerror(
