@@ -1175,7 +1175,7 @@ class CopyTraderGUI(Frame):
                             try:
 
                                 self.multiple_mod_form_object_consolidated[account_hash] = {
-                                        'quantity': IntVar(value=int(loaded_order_json[order]['order_quantity']) - int(loaded_order_json[order]['fill_quantity'])),
+                                        'quantity': IntVar(value=int(loaded_order_json[order]['order_quantity'])),
                                         'price':IntVar(value=0),
                                         'order_type':StringVar(value='LIMIT'),
                                         'trading_symbol':trading_symbol
@@ -2053,8 +2053,7 @@ class CopyTraderGUI(Frame):
             print(loaded_order_json,'test',exchange_order_id)
             self.modified_quant.delete(0,END)
             self.modified_quant.insert(0, int(
-                loaded_order_json[account_number]['order_quantity']) 
-                - int(loaded_order_json[account_number]['fill_quantity']))
+                loaded_order_json[account_number]['order_quantity']))
         except Exception as e:
             print(e)
         price_combo2.pack(side=TOP, fill=X)
