@@ -281,7 +281,7 @@ class CopyTraderGUI(Frame):
         account_risk_setting = {}
         account_moded_risk_amount = {}
         for acc in self.listOfAccounts:
-            # if acc.get_auth_status() == 'Logged In':
+            if acc.get_auth_status() == 'Logged In':
                 account_frame = LabelFrame(
                     accountSettingsFrame, text=str(acc.client_id), padx=10)
                 account_frame.pack(side=TOP, fill=X)
