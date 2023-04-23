@@ -64,7 +64,10 @@ class CopyTraderGUI(Frame):
         self.listOfXLSXAccounts = []
         self.threaded_queue = queue.Queue()
         self.Orderframe = None
-        # self.parent.after(300, self.listen_for_result)
+        self.parent.after(300, self.listen_for_result)
+        self.parent.after(90000, self.check_for_auth_status)
+
+        
         self.account_risk_vars = ['Low', 'Medium', 'High']
         self.is_place_order_panel_initial_load = True
         # self.parent.after(2000, self.simulate_result)
@@ -181,7 +184,23 @@ class CopyTraderGUI(Frame):
                 # )
                 )
         self.parent.after(2000, self.simulate_result)
-
+    def check_for_auth_status(self):
+        # check_user_token
+        try:
+            print('auth check')
+            is_account_logged_out = True
+            for acc in self.listOfAccounts:
+                if acc.get_auth_status() == 'Logged In':
+                    # print(acc.check_user_token())
+                    if acc.check_user_token() == 403:
+                        acc.authStatus == 'Logged Out'
+                        is_account_logged_out = True
+                        showerror('Copy Trader','Account ' + acc.client_id + ' is no longer logged in, please login again to continue')
+            self.parent.after(90000, self.check_for_auth_status)
+            if is_account_logged_out:
+                self.recreate_tree()
+        except Exception as e:
+            print(e)
     def loginTest(self):
 
         conn = http.client.HTTPSConnection(

@@ -333,7 +333,10 @@ class Account(object):
                     retries += 1
             else:
                 print('get_positions_zerodha ########################################')
-
+        return {
+            "status": "success",
+            "data": {
+                "net":[]}}
     def get_positions_zerodha_update(self):
         return {
             "status": "success",
@@ -595,6 +598,35 @@ class Account(object):
         else:
             print('User not logged in ########################################')
 
+    def check_user_token(self):
+        if self.broker == 'zerodha':
+            return self.check_user_token_zerodha()
+        else:
+            return self.get_user_profile_angel()
+    def check_user_token_zerodha(self):
+        retries = 0
+        success = False
+        while not success and retries < 3:
+            # if self.authStatus == 'Logged In':
+                try:
+                    auth_header = self.api_key + ":" + \
+                        self.accountInfo['data']['access_token']
+                    self.headers["Authorization"] = "token {}".format(auth_header)
+                    self.headers["X-Kite-Version"] = "3"
+                    print(self.headers)
+                    self.conn.request("GET", constant.FETCHUSERPROFILE, {},
+                                    self.headers)
+                    res = self.conn.getresponse()
+                    print(res.read())
+                    res.read()
+                except ValueError:
+                    print("Error occured")
+                    return 404
+
+                return res.status
+            # else:
+            #     print('User not logged in ########################################')
+        return 504
     def generateToken(self):
         self.headers['Authorization'] = "Bearer {0}".format(
             self.accountInfo['data']['jwtToken'])
