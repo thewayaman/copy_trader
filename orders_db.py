@@ -81,6 +81,16 @@ class Orders():
                 )
                 return cursor
 
+    def delete_all_orders(self):
+        try:
+            results = self.db_object.query(
+                ''' DELETE FROM orders''')
+            # print(results, 'DB utility')
+            return True
+        except Exception as e:
+            print('Error delete_all_orders', e)
+            return False
+            
     def get_orders(self):
         try:
             results = self.db_object.query(

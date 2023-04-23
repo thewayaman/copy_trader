@@ -1,3 +1,4 @@
+import logging
 from tkinter import ttk
 from requests import get
 import http.client
@@ -7,7 +8,7 @@ from tkinter import *
 from glob import glob
 from tkinter.messagebox import askyesno, showerror, showwarning, showinfo
 from tkinter.filedialog import askopenfilename
-
+import ast
 import socket
 import struct
 import uuid
@@ -43,7 +44,8 @@ PASSWORD = 'Platinum@10'
 CLIENTLOCALIP = '192.168.1.17'
 CLIENTPUBLICIP = '122.172.83.83'
 MACADDRESS = '16:58:63:8c:33:ce'
-
+logging.basicConfig(level=logging.INFO,
+                    format='%(process)d-%(levelname)s-%(message)s')
 
 class CopyTraderGUI(Frame):
     def __init__(self, parent=NONE, msecs=3000, **args):
@@ -62,7 +64,7 @@ class CopyTraderGUI(Frame):
         self.listOfXLSXAccounts = []
         self.threaded_queue = queue.Queue()
         self.Orderframe = None
-        self.parent.after(300, self.listen_for_result)
+        # self.parent.after(300, self.listen_for_result)
         self.account_risk_vars = ['Low', 'Medium', 'High']
         self.is_place_order_panel_initial_load = True
         # self.parent.after(2000, self.simulate_result)
@@ -72,7 +74,7 @@ class CopyTraderGUI(Frame):
         self.start_progress_bar()
         # if self.check_internet_basic():
         if True:
-            self.load_accounts_from_db()
+            self.load_accounts_from_db(True)
             self.makeWidgets()
             self.createListOfAccountsWidget()
             self.setup_database()
@@ -221,17 +223,12 @@ class CopyTraderGUI(Frame):
         data = res.read()
         print(res.status, data.decode("utf-8"))
 
-    def onStop(self):
-        # self.loop = 0
-        self.onoff.config(text='Start', command=self.onStart)
+    
 
-    def onOrderFrameConfigure(self, canvas):
-        '''Reset the scroll region to encompass the inner frame'''
-        canvas.configure(scrollregion=canvas.bbox("all"))
 
-    def onExitOrderFrameConfigure(self, canvas):
+    def canvas_frame_reconfigurer(self, canvas):
         '''Reset the scroll region to encompass the inner frame'''
-        canvas.configure(scrollregion=canvas.bbox("all"))
+        canvas.configure(scrollregion=canvas.bbox("all"))      
 
     def place_order(self):
 
@@ -276,14 +273,15 @@ class CopyTraderGUI(Frame):
         canvas.pack(side=RIGHT, fill=Y)
         canvas.create_window((1, 1), window=accountSettingsFrame, anchor="nw")
         accountSettingsFrame.bind(
-            "<Configure>", lambda event, canvas=canvas: self.onOrderFrameConfigure(canvas))
+            "<Configure>", lambda event, canvas=canvas: self.canvas_frame_reconfigurer(canvas))
 
         account_orderplacement_panel = {}
         account_riskpanel = {}
         account_quantity_panel = {}
         account_risk_setting = {}
+        account_moded_risk_amount = {}
         for acc in self.listOfAccounts:
-            if acc.get_auth_status() == 'Logged In':
+            # if acc.get_auth_status() == 'Logged In':
                 account_frame = LabelFrame(
                     accountSettingsFrame, text=str(acc.client_id), padx=10)
                 account_frame.pack(side=TOP, fill=X)
@@ -294,7 +292,7 @@ class CopyTraderGUI(Frame):
                 account_risk_setting[acc.client_id] = acc.risk_setting
                 account_orderplacement_panel[acc.client_id].set(True)
                 account_riskpanel[acc.client_id].set(True)
-
+                account_moded_risk_amount = acc.order_level_risks
                 local_risk_checkbox = Checkbutton(
                     account_frame, text='Risk', var=(account_riskpanel[acc.client_id]))
                 local_risk_checkbox.pack(side=LEFT)
@@ -343,7 +341,7 @@ class CopyTraderGUI(Frame):
 
         self.listBoxOfInstruments.bind(
             '<ButtonRelease-1>', (lambda e: self.selectInstrument(
-                account_riskpanel,
+                account_moded_risk_amount,
                 account_quantity_panel,
                 account_risk_setting
             )))
@@ -365,26 +363,26 @@ class CopyTraderGUI(Frame):
             self.place_order_var, height=300, width=400, text='Risk management')
         risk_panel.pack(side=TOP, fill=X)
         Radiobutton(risk_panel, text='High', command=(lambda: self.multiplyLots(
-            account_riskpanel,
+            account_moded_risk_amount,
             account_quantity_panel,
             account_risk_setting
         )), variable=(
             self.order_level_risk_category), value='high').pack(side=LEFT)
         Radiobutton(risk_panel, text='Medium', command=(lambda: self.multiplyLots(
-            account_riskpanel,
+            account_moded_risk_amount,
             account_quantity_panel,
             account_risk_setting
         )), variable=(
             self.order_level_risk_category), value='medium').pack(side=LEFT)
         Radiobutton(risk_panel, text='Low', command=(lambda: self.multiplyLots(
-            account_riskpanel,
+            account_moded_risk_amount,
             account_quantity_panel,
             account_risk_setting
         )), variable=(
             self.order_level_risk_category), value='low').pack(side=LEFT)
         Checkbutton(risk_panel, text='Disable Risk Management',
                     command=(lambda: self.multiplyLots(
-                        account_riskpanel,
+                        account_moded_risk_amount,
                         account_quantity_panel,
                         account_risk_setting
                     )), padx=30, variable=(self.order_level_risk_checkbox)).pack(side='left')
@@ -490,12 +488,12 @@ class CopyTraderGUI(Frame):
         self.entM = Spinbox(quantity, from_=0, to=50, values=(0, 10, 20, 30, 40, 50),
                             width=5, textvariable=current_value_quant, wrap=False,
                             command=(lambda: self.multiplyLots(
-                                account_riskpanel,
+                                account_moded_risk_amount,
                                 account_quantity_panel,
                                 account_risk_setting
                             )))
         self.entM.bind('<KeyRelease>', (lambda e: self.multiplyLots(
-            account_riskpanel,
+            account_moded_risk_amount,
             account_quantity_panel,
             account_risk_setting
         )))
@@ -582,18 +580,10 @@ class CopyTraderGUI(Frame):
             'high': 0
         }
         if self.order_level_risk_checkbox.get() == False:
-            order_index = 0
-            if self.order_level_risk_category.get() == 'low':
-                order_index = 2
-            elif self.order_level_risk_category.get() == 'medium':
-                order_index = 1
 
-            account_risk_matrix['low'] = self.order_risk_profile_var[order_index][0].get(
-            )
-            account_risk_matrix['medium'] = self.order_risk_profile_var[order_index][1].get(
-            )
-            account_risk_matrix['high'] = self.order_risk_profile_var[order_index][2].get(
-            )
+            account_risk_matrix['low'] = riskpanel['low']
+            account_risk_matrix['medium'] = riskpanel['medium']
+            account_risk_matrix['high'] = riskpanel['high']
         else:
 
             account_risk_matrix['low'] = self.account_risk_profile_var[0].get(
@@ -615,7 +605,7 @@ class CopyTraderGUI(Frame):
                 else:
                     quantity_panel[elem].set(
                         round(float(0 if self.entM.get() == '' else self.entM.get())
-                              * account_risk_matrix[risk_setting[elem].lower()] / 100)
+                              * account_risk_matrix[self.order_level_risk_category.get().lower()] / 100)
                     )
                 # print(
                 #     elem,
@@ -652,6 +642,11 @@ class CopyTraderGUI(Frame):
 
         delete_orders = Button(
             self.positionscreen_button_orders, text='Delete Orders', command=self.delete_multiple)
+        # modify_orders.configure(state='disable')
+        delete_orders.pack(side=LEFT, fill=NONE)
+
+        delete_orders = Button(
+            self.positionscreen_button_orders, text='Delete Order History', command=self.delete_order_history)
         # modify_orders.configure(state='disable')
         delete_orders.pack(side=LEFT, fill=NONE)
 
@@ -1144,7 +1139,7 @@ class CopyTraderGUI(Frame):
         canvas.pack(side=LEFT, fill=BOTH)
         canvas.create_window((1, 1), window=executionFrame, anchor="nw")
         executionFrame.bind(
-            "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
+            "<Configure>", lambda event, canvas=canvas: self.canvas_frame_reconfigurer(canvas))
         exchange_order_ids_by_account = {}
         self.multiple_mod_form_object_consolidated = {}
         self.multiple_mod_form_object_price_consolidated = {}
@@ -1242,6 +1237,11 @@ class CopyTraderGUI(Frame):
                     self.multiple_mod_form_object_consolidated[item]['order_type'].set('LIMIT')
                 else:
                     self.multiple_mod_form_object_consolidated[item]['order_type'].set('MARKET')
+    def delete_order_history(self):
+        if self.order_db.delete_all_orders():
+            self.recreate_running_orders_tree()
+            if showinfo('Copy Trader','All orders deleted') == 'ok':
+                pass
 
     def delete_multiple(self):
         if hasattr(self,'execute_multiple_delete_win'):
@@ -1283,7 +1283,7 @@ class CopyTraderGUI(Frame):
         canvas.pack(side=LEFT, fill=BOTH)
         canvas.create_window((1, 1), window=executionFrame, anchor="nw")
         executionFrame.bind(
-            "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
+            "<Configure>", lambda event, canvas=canvas: self.canvas_frame_reconfigurer(canvas))
         exchange_order_ids_by_account = {}
         if len(accounts_by_order_id.keys()) > 0:
             for item in accounts_by_order_id.keys():
@@ -1424,7 +1424,7 @@ class CopyTraderGUI(Frame):
         canvas.pack(side=LEFT, fill=BOTH)
         canvas.create_window((1, 1), window=executionFrame, anchor="nw")
         executionFrame.bind(
-            "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
+            "<Configure>", lambda event, canvas=canvas: self.canvas_frame_reconfigurer(canvas))
 
         for key, value in form_object.items():
             # print(value,'\t\n')
@@ -1641,7 +1641,7 @@ class CopyTraderGUI(Frame):
             canvas.pack(side=LEFT, fill=BOTH)
             canvas.create_window((1, 1), window=executionFrame, anchor="nw")
             executionFrame.bind(
-                "<Configure>", lambda event, canvas=canvas: self.onExitOrderFrameConfigure(canvas))
+                "<Configure>", lambda event, canvas=canvas: self.canvas_frame_reconfigurer(canvas))
         self.test_object = StringVar(value='LIMIT')
         self.form_object_consolidate = {}
         self.form_object_elements = {}
@@ -1935,7 +1935,6 @@ class CopyTraderGUI(Frame):
         for account in self.listOfAccounts:
             if account.authStatus == 'Logged In':
                 positions = account.get_positions()
-
                 self.openPositionsTree.insert('', 'end', iid=account.client_id, text=pol,
                                             values=(
                                                 account.client_id), open=True, tags=('order',))
@@ -2100,39 +2099,6 @@ class CopyTraderGUI(Frame):
             if is_account_logged_in == False:
                 showerror(
                     'Copy Trader', "The account isn't logged in for order modifcation", parent=self.view_order_win)
-
-    def onViewOrderFrameConfigure(self, canvas):
-        '''Reset the scroll region to encompass the inner frame'''
-        canvas.configure(scrollregion=canvas.bbox("all"))
-
-    def rerenderOrderFrame(self):
-        print('rerenderOrderFrame')
-        if self.Orderframe != None:
-            self.Orderframe.destroy()
-        self.Orderframe = Frame((self.Ordercanvas), width=700)
-        self.Orderframe.pack(side=LEFT, fill=BOTH, expand=True)
-        for acc in self.listOfAccounts:
-            accFrame = LabelFrame((self.Orderframe),
-                                  height=300, width=700, text=(acc.client_id), pady=20)
-            columns = ('INSTRUMENT', 'QUANTITY', 'PRICE', 'STATUS')
-            acctree = ttk.Treeview(accFrame, columns=columns, show='headings')
-            acctree.heading('INSTRUMENT', text='Instrument1')
-            acctree.heading('QUANTITY', text='Quantity2')
-            acctree.heading('PRICE', text='Price3')
-            acctree.heading('STATUS', text='Status4')
-            col_width = acctree.winfo_width()
-            for acc in self.listOfAccounts:
-                acctree.insert('', END, values=(acc.get_tree_view()))
-            else:
-                accFrame.pack(side=TOP, fill=X, expand=True)
-                acctree.pack(side=TOP, fill=X, expand=True)
-
-        else:
-            self.Ordercanvas.after(3000, self.rerenderOrderFrame)
-
-    def onFrameConfigure(self, event):
-        '''Reset the scroll region to encompass the inner frame'''
-        self.Ordercanvas.configure(scrollregion=self.Ordercanvas.bbox("all"))
 
     def selectInstrument(self, riskpanel, quantity_panel, risk_setting):
         try:
@@ -2326,16 +2292,7 @@ class CopyTraderGUI(Frame):
     def orderType(self):
         print('CHecked')
 
-    def openPanel(self):
-        self.onStop()
-        name = askopenfilename(initialdir=self.opens, filetypes=imageTypes)
-        if name:
-            if self.drawn:
-                self.canvas.delete(self.drawn)
-            img = PhotoImage(file=name)
-            self.canvas.config(height=img.height(), width=img.width())
-            self.drawn = self.canvas.create_image(2, 2, image=img, anchor=NW)
-            self.image = name, img
+   
 
     def onQuit(self):
         self.update()
@@ -2364,7 +2321,10 @@ class CopyTraderGUI(Frame):
                         for cell in row:
                             values.append(cell.value)
                         self.listOfXLSXAccounts.append(values)
-                        acc = Account(*values)
+                        temp_modded_account = list(values)
+                        # acc_values[-1] = json.loads(acc_values[-1])
+                        temp_modded_account[-1] = json.loads(temp_modded_account[-1])
+                        acc = Account(*temp_modded_account)
 
                         is_duplicate = False
                         for x in self.listOfAccounts:
@@ -2377,7 +2337,8 @@ class CopyTraderGUI(Frame):
                             if acc.authStatus == 'Logged In':
                                 if self.account_db.insert_account_single_entry(
                                         acc.tuple_val()):
-                                    self.listOfAccounts.append(acc)
+                                    self.load_accounts_from_db()
+                                    
                                 loaded_accounts_object[acc.client_id] = 'Loaded'
                             else:
                                 loaded_accounts_object[acc.client_id] = 'Failed to load, please check the credentials and retry later'
@@ -2386,6 +2347,8 @@ class CopyTraderGUI(Frame):
                     loaded_accounts_object, 'Accounts')
                 self.recreate_tree()
             except Exception as e:
+                print('Exception',e)
+                logging.warning('This will get logged to a file',e)
                 if askyesno('Copy Trader', 'An error occured in the file, do you want to retry?'):
                     self.loadAccounts()
                 else:
@@ -2394,19 +2357,24 @@ class CopyTraderGUI(Frame):
             if askyesno('Copy Trader', 'No file selected, do you want to retry?'):
                 self.loadAccounts()
 
-    def load_accounts_from_db(self):
-        self.account_db = Account_DB()
+    def load_accounts_from_db(self,initiate_serivce = False):
+        if initiate_serivce:
+            self.account_db = Account_DB()
         temp_accounts = self.account_db.get_accounts_data()
         print(temp_accounts, 'Temp accounts load')
+        self.listOfAccounts = []
         if len(temp_accounts) != 0:
             for acc_values in temp_accounts:
-                acc = Account(*acc_values)
+                temp_modded_account = list(acc_values)
+                # acc_values[-1] = json.loads(acc_values[-1])
+                temp_modded_account[-1] = json.loads(temp_modded_account[-1])
+                acc = Account(*temp_modded_account)
                 if acc.is_valid():
                     self.listOfAccounts.append(acc)
-                    self.account_db.insert_account_single_entry(
-                        acc.tuple_val())
+                    # self.account_db.insert_account_single_entry(
+                    #     acc.tuple_val())
 
-        self.initiate_login()
+        # self.initiate_login()
 
     def initiate_login(self):
         for item in self.listOfAccounts:
@@ -2424,12 +2392,15 @@ class CopyTraderGUI(Frame):
                 item.client_id))
 
     def createListOfAccountsWidget(self):
-        self.tree = ttk.Treeview(self.canvas, column=('CLIENT_ID', 'STATUS', 'RISK'), show='headings',
+        self.tree = ttk.Treeview(self.canvas, column=('CLIENT_ID', 'STATUS', 'RISK','LOW','MEDIUM','HIGH'), show='headings',
                                  height=8,
                                  selectmode='browse',)
         self.tree.heading('CLIENT_ID', text='Client ID')
         self.tree.heading('STATUS', text='Status')
         self.tree.heading('RISK', text='Risk')
+        self.tree.heading('LOW', text='Low')
+        self.tree.heading('MEDIUM', text='Medium')
+        self.tree.heading('HIGH', text='High')
 
         pos = 1
         col_width = self.tree.winfo_width()
@@ -2517,7 +2488,7 @@ class CopyTraderGUI(Frame):
     def remove_account(self, selected_account, account_screen):
         print(self.tree.get_children())
         if self.account_db.remove_account(selected_account.client_id) == True:
-            if showinfo('Copy trader', 'Removed account {0} \n from copy trader'.format(selected_account)) == 'ok':
+            if showinfo('Copy trader', 'Removed account {0} \n from copy trader'.format(selected_account),parent=account_screen) == 'ok':
                 selected_index = -1
                 for ind, obj in enumerate(self.listOfAccounts):
                     if obj.client_id == selected_account.client_id:
@@ -2528,7 +2499,7 @@ class CopyTraderGUI(Frame):
                 self.recreate_tree()
             else:
                 showerror('Copy trader', 'Failed to remove {0} \n from copy trader'.format(
-                    selected_account))
+                    selected_account),parent=account_screen)
         pass
 
     def recreate_tree(self):
@@ -2836,7 +2807,7 @@ class CopyTraderGUI(Frame):
         self.is_single_accountValid = False
         self.broker = StringVar()
         self.broker.set('angel')
-        win = Toplevel(self, height=600, width=500, padx=20,
+        win = Toplevel(self, height=650, width=500, padx=20,
                        pady=20)
         win.pack_propagate(0)
         win.title('Add Account')
@@ -2894,7 +2865,27 @@ class CopyTraderGUI(Frame):
         account_level_risk = LabelFrame(main_account_input_frame, text='Account level risk',
                                         pady=5,
                                         padx=5)
+        risk_across_panel = LabelFrame(main_account_input_frame, text='Order level risk',
+                                        pady=5,
+                                        padx=5)
+        self.order_level_risks_entry = {
+            'low' : DoubleVar(),
+            'medium' : DoubleVar(),
+            'high' : DoubleVar()
+        }
+        self.order_level_risks_entry['low'].set(80)
+        self.order_level_risks_entry['medium'].set(60)
+        self.order_level_risks_entry['high'].set(40)
+        Label(risk_across_panel,text='Low').pack(side=LEFT,fill=NONE)
+        Entry(risk_across_panel,textvariable=self.order_level_risks_entry['low'],width=10).pack(side=LEFT,fill=NONE)
+        Label(risk_across_panel,text='Medium').pack(side=LEFT,fill=NONE)
+        Entry(risk_across_panel,textvariable=self.order_level_risks_entry['medium'],width=10).pack(side=LEFT,fill=NONE)
+        Label(risk_across_panel,text='High').pack(side=LEFT,fill=NONE)
+        Entry(risk_across_panel,textvariable=self.order_level_risks_entry['high'],width=10).pack(side=LEFT,fill=NONE)
 
+
+        self.order_level_risks_entry
+        risk_across_panel.pack(side=TOP, anchor=W)
         # setting variable for Integers
         self.account_risk = StringVar()
         self.account_risk.set(self.account_risk_vars[0])
@@ -2909,7 +2900,7 @@ class CopyTraderGUI(Frame):
         account_risk_option.pack(expand=True)
         account_level_risk.pack(side=TOP, anchor=W)
         single_acc_save_btn = Button(
-            main_account_input_frame, text='Save Account', command=(self.save_single_account))
+            main_account_input_frame, text='Save Account', command=(lambda : self.save_single_account(win)))
         single_acc_save_btn.pack(side=RIGHT, anchor=SE)
         single_acc_save_btn.configure(state='disable')
         Button(main_account_input_frame, text='Test Account', command=(
@@ -2939,7 +2930,12 @@ class CopyTraderGUI(Frame):
             print('broker:{0}\nclient id:{1}\npassword:{2}\nsecret key:{3}\ntotp key:{4}'.format(self.broker.get(
             ), self.clinet_id_entry.get(), self.password_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get()))
             self.temp_account_object = Account(self.clinet_id_entry.get(), self.password_entry.get(
-            ), self.api_key_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get(), self.broker.get(), self.account_risk.get())
+            ), self.api_key_entry.get(), self.secret_key_entry.get(), self.totp_key_entry.get(), self.broker.get(), self.account_risk.get(),
+            {
+            'low' : self.order_level_risks_entry['low'].get(),
+            'medium' : self.order_level_risks_entry['medium'].get(),
+            'high' : self.order_level_risks_entry['high'].get()
+            })
             for x in self.listOfAccounts:
                 if x.client_id == self.clinet_id_entry.get():
                     showerror('Account already exists',
@@ -2956,7 +2952,7 @@ class CopyTraderGUI(Frame):
                 showerror('Test Account Validation Failed',
                           'Please recheck your credetials or try again later')
 
-    def save_single_account(self):
+    def save_single_account(self,win):
 
         try:
             if self.temp_account_object.authStatus == 'Logged In':
@@ -2965,8 +2961,8 @@ class CopyTraderGUI(Frame):
                 self.listOfAccounts.append(self.temp_account_object)
                 self.recreate_tree()
                 self.place_order()
-                showinfo('Copy Trader',
-                         'Account saved successfully')
+                if showinfo('Copy Trader','Account saved successfully') == 'ok':
+                    win.destroy()
         except Exception as e:
             print(e)
             showwarning('An error occured please try again or contact the admin',

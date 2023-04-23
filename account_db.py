@@ -36,7 +36,7 @@ class Account_DB():
         try:
             # self.db_object.create_schema(''' DELETE FROM accounts ''')
             cursor = self.db_object.execute_one(
-                '''INSERT OR IGNORE INTO accounts VALUES(?,?,?,?,?,?,?)''', records
+                '''INSERT OR IGNORE INTO accounts VALUES(?,?,?,?,?,?,?,?)''', records
             )
             print(cursor)
             return True
@@ -51,11 +51,12 @@ class Account_DB():
                                         secret_key TEXT NOT NULL,
                                         totp_key TEXT NOT NULL,
                                         broker TEXT,
-                                        risk TEXT
+                                        risk TEXT,
+                                        risk_object TEXT
                                     ); """
                 )
                 cursor = self.db_object.execute_many(
-                    '''INSERT OR IGNORE INTO accounts VALUES(?,?,?,?,?,?,?)''', records
+                    '''INSERT OR IGNORE INTO accounts VALUES(?,?,?,?,?,?,?,?)''', records
                 )
                 return True
             return False
@@ -75,7 +76,8 @@ class Account_DB():
                                         secret_key TEXT NOT NULL,
                                         totp_key TEXT NOT NULL,
                                         broker TEXT,
-                                        risk TEXT
+                                        risk TEXT,
+                                        risk_object TEXT
                                     ); """
                 )
                 results = self.db_object.query(''' SELECT * FROM accounts''')
@@ -91,6 +93,8 @@ class Account_DB():
             # print(results, 'DB utility')
             return True
         except Exception as e:
+            print('Exception remove_account',e)
+            logging.warning('This will get logged to a file')
             if 'no such table' in repr(e):
                 self.db_object.create_schema(
                     """ CREATE TABLE IF NOT EXISTS accounts (
@@ -100,7 +104,8 @@ class Account_DB():
                                         secret_key TEXT NOT NULL,
                                         totp_key TEXT NOT NULL,
                                         broker TEXT,
-                                        risk TEXT
+                                        risk TEXT,
+                                        risk_object TEXT
                                     ); """
                 )
                 results = self.db_object.query(''' DELETE from items WHERE client_id='{0}' '''.format(client_id))

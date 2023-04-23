@@ -17,7 +17,11 @@ from zerodha_order_ws import ZerodhaWSV1
 
 class Account(object):
 
-    def __init__(self, CLIENT_ID, PASSWORD, APIKEY, SECRETKEY, TOTP_KEY, BROKER, RISK='low'):
+    def __init__(self, CLIENT_ID, PASSWORD, APIKEY, SECRETKEY, TOTP_KEY, BROKER, RISK='low',ORDER_LEVEL_RISK = {
+            'low' : 40,
+            'medium' : 60,
+            'high' : 70
+        }):
         self.client_id = CLIENT_ID
         self.password = PASSWORD
         self.api_key = APIKEY
@@ -25,6 +29,7 @@ class Account(object):
         self.totp_key = TOTP_KEY
         self.broker = BROKER
         self.risk_setting = RISK
+        self.order_level_risks = ORDER_LEVEL_RISK
         self.accountInfo = {"status": 'true', "message": "SUCCESS", "errorcode": "", "data": {"jwtToken": "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VybmFtZSI6IkExMjk1NjgzIiwicm9sZXMiOjAsInVzZXJ0eXBlIjoiVVNFUiIsImlhdCI6MTY3MzE2MTM1NywiZXhwIjoxNzU5NTYxMzU3fQ.L3NYyts9_oO37zCxGTovWbbZYDTlP7Zq2LplnKKqZ17L6eOh18qZocoLuDWf9WkOnZZ5PSAbfeloxR43aNVmmQ",
                                                                                               "refreshToken": "eyJhbGciOiJIUzUxMiJ9.eyJ0b2tlbiI6IlJFRlJFU0gtVE9LRU4iLCJpYXQiOjE2NzMxNjEzNTd9.qciX-XwoTVJgE2KLqGOyC4nV8xuxY_K_3-9_juLQ0RPaiE8ylPdhGXHIw6IoKnqu3ilJ76WdKtWQVq4YFVseJA", "feedToken": "0806422956"}}
         self.tempAccountInfo = {
@@ -82,10 +87,25 @@ class Account(object):
         return (self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.authStatus, self.risk_setting)
 
     def get_tree_view(self):
-        return (self.client_id, self.authStatus, self.risk_setting)
+        return (
+            self.client_id,
+            self.authStatus, self.risk_setting,
+            self.order_level_risks['low'],
+            self.order_level_risks['medium'],
+            self.order_level_risks['high']
+        )
 
     def tuple_val(self):
-        return tuple((self.client_id, self.password, self.api_key, self.secret_key, self.totp_key, self.broker, self.risk_setting))
+        return tuple((
+            self.client_id,
+            self.password,
+            self.api_key,
+            self.secret_key,
+            self.totp_key,
+            self.broker,
+            self.risk_setting,
+            json.dumps(self.order_level_risks)
+        ))
 
     def is_valid(self):
         if self.client_id == None:
@@ -309,7 +329,7 @@ class Account(object):
                             pass
                     return parsedJson
                 except Exception as e:
-                    print("Couldn't parse the JSON response received from the server: {0}")
+                    print("Couldn't parse the JSON response received from the server: {0}".format(e))
                     retries += 1
             else:
                 print('get_positions_zerodha ########################################')
