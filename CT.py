@@ -311,7 +311,7 @@ class CopyTraderGUI(Frame):
                 account_risk_setting[acc.client_id] = acc.risk_setting
                 account_orderplacement_panel[acc.client_id].set(True)
                 account_riskpanel[acc.client_id].set(True)
-                account_moded_risk_amount = acc.order_level_risks
+                account_moded_risk_amount[acc.client_id] = acc.order_level_risks
                 local_risk_checkbox = Checkbutton(
                     account_frame, text='Risk', var=(account_riskpanel[acc.client_id]))
                 local_risk_checkbox.pack(side=LEFT)
@@ -598,7 +598,7 @@ class CopyTraderGUI(Frame):
             'medium': 0,
             'high': 0
         }
-        if self.order_level_risk_checkbox.get() == False:
+        """ if self.order_level_risk_checkbox.get() == False:
 
             account_risk_matrix['low'] = riskpanel['low']
             account_risk_matrix['medium'] = riskpanel['medium']
@@ -610,7 +610,7 @@ class CopyTraderGUI(Frame):
             account_risk_matrix['medium'] = self.account_risk_profile_var[1].get(
             )
             account_risk_matrix['high'] = self.account_risk_profile_var[2].get(
-            )
+            ) """
         if quantity_panel.values() != 0:
             for elem in quantity_panel.keys():
                 print(risk_setting[elem].lower(), elem, account_risk_matrix)
@@ -622,10 +622,14 @@ class CopyTraderGUI(Frame):
                     else:
                         quantity_panel[elem].set(quant)
                 else:
-                    quantity_panel[elem].set(
-                        round(float(0 if self.entM.get() == '' else self.entM.get())
-                              * account_risk_matrix[self.order_level_risk_category.get().lower()] / 100)
-                    )
+                    if self.order_level_risk_checkbox.get() == False:
+                        quantity_panel[elem].set(
+                            round(float(0 if self.entM.get() == '' else self.entM.get())
+                                * riskpanel[elem][self.order_level_risk_category.get().lower()] / 100)
+                        )
+                    else:
+                        quantity_panel[elem].set(
+                            round(float(0 if self.entM.get() == '' else self.entM.get())))
                 # print(
                 #     elem,
                 #     risk_setting[elem],

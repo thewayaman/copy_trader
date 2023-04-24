@@ -1,7 +1,6 @@
 
 import socket
 import uuid
-from angel_order_ws import AngelOrderWS, AngelOrderWSV1
 import constant
 import requests
 import http.client
@@ -9,11 +8,14 @@ import json
 import pyotp
 import enum
 import websocket
-from zerodha_login import ZerodhaConnect, ZerodhaConnectV2
+from zerodha_login import ZerodhaConnectV2
 from hashlib import sha256
 from zerodha_db import ZerodhaInstruments
 from zerodha_order_ws import ZerodhaWSV1
+import logging
 
+logging.basicConfig(filename='copy_trader.log',filemode='a',level=logging.DEBUG,
+                    format="[%(filename)s:%(lineno)s - %(funcName)20s()] %(message)s")
 
 class Account(object):
 
@@ -313,15 +315,16 @@ class Account(object):
                     self.headers["Authorization"] = "token {}".format(auth_header)
                     self.headers["X-Kite-Version"] = "3"
                     print(self.headers)
-                    self.conn.request("GET", constant.GETPOSITIONSZERODHA, {},
+                    conn = http.client.HTTPSConnection("api.kite.trade")
+                    conn.request("GET", constant.GETPOSITIONSZERODHA, {},
                                     self.headers)
-                    res = self.conn.getresponse()
+                    res = conn.getresponse()
                     data = res.read()
-
                     print(res.status, data.decode("utf-8"))
                     if res.status == 200:
                         retries = 5
                         parsedJson = json.loads(data.decode("utf-8"))
+                        logging.info(f'{res.status}{parsedJson}')
                         if 'errorcode' in parsedJson and parsedJson['errorcode'] != '':
                             print(parsedJson['errorcode'])
                         else:
@@ -330,6 +333,7 @@ class Account(object):
                     return parsedJson
                 except Exception as e:
                     print("Couldn't parse the JSON response received from the server: {0}".format(e))
+                    logging.warning(f'{e} get_positions_zerodha')
                     retries += 1
             else:
                 print('get_positions_zerodha ########################################')
@@ -1022,15 +1026,20 @@ class Account(object):
                     self.headers["Authorization"] = "token {}".format(auth_header)
                     self.headers["X-Kite-Version"] = "3"
                     print(self.headers)
-                    self.conn.request("GET", constant.PLACEORDERZERODHA, {},
-                                    self.headers)
-                    res = self.conn.getresponse()
+                    conn = http.client.HTTPSConnection("api.kite.trade")
+                    conn.request("GET", constant.PLACEORDERZERODHA, {},
+                                    self.headers
+                                    )
+                    res = conn.getresponse()
                     data = res.read()
+                    
 
                     print(res.status, data.decode("utf-8"))
                     if res.status == 200:
                         retries = 5
+                        
                         parsedJson = json.loads(data.decode("utf-8"))
+                        logging.info(f'{res.status}###{parsedJson}')
                         if 'errorcode' in parsedJson and parsedJson['errorcode'] != '':
                             print(parsedJson['errorcode'])
                         else:
@@ -1039,6 +1048,7 @@ class Account(object):
                     return parsedJson
                 except Exception as e:
                     print("Couldn't parse the JSON response received from the server: {0}")
+                    logging.info(f'{e}')
                     retries += 1
             else:
                 print('get_orders_zerodha ########################################')
