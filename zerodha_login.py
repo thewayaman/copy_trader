@@ -10,6 +10,12 @@ from selenium.webdriver.support import expected_conditions as EC
 import time, pyotp
 import logging
 import mintotp
+from time import ctime
+import ntplib
+import base64
+import hmac
+import struct
+
 # logging.basicConfig(level=logging.DEBUG,
 #                     format='(%(threadName)-9s) %(message)s',)
 
@@ -62,7 +68,7 @@ class ZerodhaConnect(threading.Thread):
                 # totp = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="totp"]'))
                 # authkey = pyotp.TOTP(self.totp_key)
                 # totp.send_keys(authkey.now())
-                totp.send_keys(mintotp.totp(self.totp_key))
+                totp.send_keys(self.totp(self.totp_key))
                 #adjustment complete
                 authorize_btn = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH,('//*[@id="container"]/div/div/form/div/button'))))
                 authorize_btn.click()
@@ -104,6 +110,8 @@ class ZerodhaConnect(threading.Thread):
         response['token'] = ''
 
         return response
+
+
 
 class ZerodhaConnectV2():
     def __init__(self,api_key, api_secret, user_id, user_pwd, totp_key):
@@ -148,7 +156,9 @@ class ZerodhaConnectV2():
             try:
                 # totp = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_xpath('//*[@id="totp"]'))
                 authkey = pyotp.TOTP(self.totp_key)
-                totp.send_keys(authkey.now())
+                # time.sleep(2)
+
+                totp.send_keys(self.totp(self.totp_key))
                 #adjustment complete
                 authorize_btn = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH,('//*[@id="container"]/div/div/form/div/button'))))
                 authorize_btn.click()
@@ -166,7 +176,7 @@ class ZerodhaConnectV2():
 
             
             request_token = ''
-            time.sleep(3)
+            # time.sleep(3)
             try:
                 url = driver.current_url
                 initial_token = url.split('request_token=')[1]
@@ -186,3 +196,19 @@ class ZerodhaConnectV2():
                 print('Token failure')
     def fetch_request_token(self):
         return self.response
+
+    def hotp(self,key, counter, digits=6, digest='sha1'):
+        key = base64.b32decode(key.upper() + '=' * ((8 - len(key)) % 8))
+        counter = struct.pack('>Q', counter)
+        mac = hmac.new(key, counter, digest).digest()
+        offset = mac[-1] & 0x0f
+        binary = struct.unpack('>L', mac[offset:offset+4])[0] & 0x7fffffff
+        return str(binary)[-digits:].zfill(digits)
+
+
+    def totp(self,key, time_step=30, digits=6, digest='sha1'):
+        c = ntplib.NTPClient()
+        response = c.request('in.pool.ntp.org', version=3)
+        print(ctime(response.tx_time),time.time())
+
+        return self.hotp(key, int(response.tx_time / time_step), digits, digest)
