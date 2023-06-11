@@ -299,30 +299,58 @@ class CopyTraderGUI(Frame):
         account_quantity_panel = {}
         account_risk_setting = {}
         account_moded_risk_amount = {}
+        self.account_iceberg_lot = {}
+        self.account_iceberg_quant = {}
         for acc in self.listOfAccounts:
             if acc.get_auth_status() == 'Logged In':
                 account_frame = LabelFrame(
                     accountSettingsFrame, text=str(acc.client_id), padx=10)
                 account_frame.pack(side=TOP, fill=X)
-
+                non_ice_frame = Frame(account_frame)
                 account_orderplacement_panel[acc.client_id] = BooleanVar()
                 account_riskpanel[acc.client_id] = BooleanVar()
                 account_quantity_panel[acc.client_id] = DoubleVar()
+                self.account_iceberg_lot[acc.client_id] = IntVar()
+                self.account_iceberg_quant[acc.client_id] = IntVar()
                 account_risk_setting[acc.client_id] = acc.risk_setting
                 account_orderplacement_panel[acc.client_id].set(True)
                 account_riskpanel[acc.client_id].set(True)
                 account_moded_risk_amount[acc.client_id] = acc.order_level_risks
                 local_risk_checkbox = Checkbutton(
-                    account_frame, text='Risk', var=(account_riskpanel[acc.client_id]))
+                    non_ice_frame, text='Risk', var=(account_riskpanel[acc.client_id]))
                 local_risk_checkbox.pack(side=LEFT)
                 # local_risk_checkbox.select()
                 local_checkbox = Checkbutton(
-                    account_frame, text='Active', var=(account_orderplacement_panel[acc.client_id]))
+                    non_ice_frame, text='Active', var=(account_orderplacement_panel[acc.client_id]))
                 local_checkbox.pack(side=LEFT)
 
                 local_entry = Entry(
-                    account_frame, textvariable=account_quantity_panel[acc.client_id], width=10)
+                    non_ice_frame, textvariable=account_quantity_panel[acc.client_id], width=10)
                 local_entry.pack(side=LEFT)
+                iceberg_frame = Frame(
+                    account_frame
+                )
+                iceberg_leg_label = Label(
+                    iceberg_frame, text='Leg', width=5)
+                iceberg_leg_label.pack(side=LEFT, fill=NONE)
+                iceberg_leg_entry = Entry(
+                    iceberg_frame,
+                    textvariable=self.account_iceberg_lot[acc.client_id],
+                    width=4)
+                iceberg_leg_entry.pack(side=LEFT, fill=NONE)
+
+                iceberg_quantity_label = Label(
+                    iceberg_frame, text='Qty',
+                    width=5)
+                iceberg_quantity_label.pack(side=LEFT, fill=NONE)
+                iceberg_quantity_entry = Entry(
+                    iceberg_frame,
+                    textvariable=self.account_iceberg_quant[acc.client_id],
+                    width=6)
+                iceberg_quantity_entry.pack(side=LEFT, fill=NONE)
+                non_ice_frame.pack(side=TOP, fill=X)
+                iceberg_frame.pack(side=LEFT, fill=X)
+
                 # local_checkbox.select()
                 print('>>>>>>>>>>>>>>')
                 print(account_orderplacement_panel[acc.client_id],
@@ -541,7 +569,7 @@ class CopyTraderGUI(Frame):
         update_price.pack(side=LEFT)
 
         labP = Label(price_combo1, width=10, text='Stop Loss')
-        self.entSL = Entry(price_combo1, width=10, text='Enter Stop Loss')
+        self.entSL = Entry(price_combo1, width=10, text='Enter Stop Loss',textvariable=DoubleVar(0))
         labP.pack(side=LEFT)
         self.entSL.pack(side=LEFT)
         price_combo1.pack(side=TOP, fill=X)
@@ -573,7 +601,7 @@ class CopyTraderGUI(Frame):
             self.entM.delete(0, END)
             self.entM.insert(0, int(0))
 
-        self.ordertype.set('MARKET')
+        # self.ordertype.set('MARKET')  
         self.entIQ.configure(state=state)
         self.multiplyLots(account_riskpanel,
                           account_quantity_panel,
@@ -598,38 +626,25 @@ class CopyTraderGUI(Frame):
             'medium': 0,
             'high': 0
         }
-        """ if self.order_level_risk_checkbox.get() == False:
-
-            account_risk_matrix['low'] = riskpanel['low']
-            account_risk_matrix['medium'] = riskpanel['medium']
-            account_risk_matrix['high'] = riskpanel['high']
-        else:
-
-            account_risk_matrix['low'] = self.account_risk_profile_var[0].get(
-            )
-            account_risk_matrix['medium'] = self.account_risk_profile_var[1].get(
-            )
-            account_risk_matrix['high'] = self.account_risk_profile_var[2].get(
-            ) """
+       
         if quantity_panel.values() != 0:
             for elem in quantity_panel.keys():
-                print(risk_setting[elem].lower(), elem, account_risk_matrix)
-                if self.variety.get() == 'ICEBERG':
+                # print(risk_setting[elem].lower(), elem, account_risk_matrix)
+                quant = 0
+                if self.order_level_risk_checkbox.get() == False:
                     quant = round(float(0 if self.entM.get() == '' else self.entM.get())
-                                  * account_risk_matrix[risk_setting[elem].lower()] / 100)
-                    if quant < 5:
-                        quantity_panel[elem].set(5)
-                    else:
-                        quantity_panel[elem].set(quant)
+                            * riskpanel[elem][self.order_level_risk_category.get().lower()] / 100)
                 else:
-                    if self.order_level_risk_checkbox.get() == False:
-                        quantity_panel[elem].set(
-                            round(float(0 if self.entM.get() == '' else self.entM.get())
-                                * riskpanel[elem][self.order_level_risk_category.get().lower()] / 100)
-                        )
-                    else:
-                        quantity_panel[elem].set(
-                            round(float(0 if self.entM.get() == '' else self.entM.get())))
+                    quant = round(float(0 if self.entM.get() == '' else self.entM.get()))
+                if self.variety.get() == 'ICEBERG':
+                    if quant < 5:
+                        quant = 5
+                    self.account_iceberg_lot[elem].set(3)
+                    self.account_iceberg_quant[elem].set(quant)
+                else:
+                    self.account_iceberg_lot[elem].set(0)
+                    self.account_iceberg_quant[elem].set(0)
+                quantity_panel[elem].set(quant)
                 # print(
                 #     elem,
                 #     risk_setting[elem],
@@ -858,6 +873,13 @@ class CopyTraderGUI(Frame):
                                                             internal_order[0], order['placed_by'], order['status'],'exchange_order_status',False)
                                 self.update_order_status(
                                                             internal_order[0], order['placed_by'], order['filled_quantity'],'fill_quantity',False)
+                            if order != None and type(order) is dict and (order['placed_by'] in internal_order_object) and internal_order_object[order['placed_by']]['data']['order_id'] != None and internal_order_object[order['placed_by']]['data']['order_id'] == order['parent_order_id']:
+                                print(json.loads(internal_order[2]),'823')
+                                self.update_order_status(
+                                                            internal_order[0], order['placed_by'], 'COMPLETE' if order['meta']['iceberg']['remaining_quantity'] == 0 else 'PARTIALLY FILLED'
+                                                            ,'exchange_order_status',False)
+                                self.update_order_status(
+                                                            internal_order[0], order['placed_by'], order['meta']['iceberg']['total_quantity'] - order['meta']['iceberg']['remaining_quantity'],'fill_quantity',False)
                         except Exception as e:
                             print(e,'824',order,internal_order_object)
         except Exception as e:
@@ -1166,6 +1188,7 @@ class CopyTraderGUI(Frame):
         exchange_order_ids_by_account = {}
         self.multiple_mod_form_object_consolidated = {}
         self.multiple_mod_form_object_price_consolidated = {}
+        self.multiple_mod_form_object_trigger_price_consolidated = {}
         if len(accounts_by_order_id.keys()) > 0:
             for item in accounts_by_order_id.keys():
                 if item not in exchange_order_ids_by_account:
@@ -1178,12 +1201,23 @@ class CopyTraderGUI(Frame):
                         list_of_orders[0][1])['tradingsymbol']
                     label_frame = LabelFrame(executionFrame,text=item + '\t\t' + trading_symbol)
                     self.multiple_mod_form_object_price_consolidated[item] = DoubleVar()
+                    self.multiple_mod_form_object_trigger_price_consolidated[item] = DoubleVar()
                     price_frame = Frame(label_frame,padx=10)
                     price_frame.pack(side=TOP,fill=X)
                     Label(price_frame,text='Price').pack(side=LEFT,fill=NONE)
-                    Entry(price_frame,textvariable=self.multiple_mod_form_object_price_consolidated[item]).pack(side=LEFT,fill=NONE)
-                    check_var = IntVar()
+                    Entry(price_frame,textvariable=self.multiple_mod_form_object_price_consolidated[item],width=10).pack(side=LEFT,fill=NONE)
+                    Label(price_frame,text='Trigger Price').pack(side=LEFT,fill=NONE)
+                    Entry(price_frame,textvariable=self.multiple_mod_form_object_trigger_price_consolidated[item],width=10).pack(side=LEFT,fill=NONE)
+
+                    check_var = StringVar()
+                    """ Label(price_frame,text='Limit').pack(side=LEFT,fill=NONE)
                     Checkbutton(price_frame,variable=check_var,command=lambda key = item,state = check_var:self.toggleLimitMarket(key,state)).pack(side=LEFT,fill=NONE)
+                    Label(price_frame,text='SL').pack(side=LEFT,fill=NONE)
+                    Checkbutton(price_frame,variable=check_var,command=lambda key = item,state = check_var:self.toggleLimitMarket(key,state)).pack(side=LEFT,fill=NONE) """
+                    Radiobutton(price_frame,text='Limit',variable=check_var,value='LIMIT',command=lambda key = item,state = check_var:self.toggleLimitMarket(key,state)).pack(side=LEFT,fill=NONE)
+                    Radiobutton(price_frame,text='Market',variable=check_var,value='MARKET',command=lambda key = item,state = check_var:self.toggleLimitMarket(key,state)).pack(side=LEFT,fill=NONE)
+                    Radiobutton(price_frame,text='SL',variable=check_var,value='SL',command=lambda key = item,state = check_var:self.toggleLimitMarket(key,state)).pack(side=LEFT,fill=NONE)
+
                     for order in accounts_by_order_id[item]:
                         if order in loaded_order_json and loaded_order_json[order]['exchange_order_status'] != 'COMPLETE' and loaded_order_json[order]['exchange_order_status'] != 'REJECTED' and loaded_order_json[order]['exchange_order_status'] != 'CANCELLED':
                             exchange_order_ids_by_account[item][order] = loaded_order_json[order]['data']['order_id']
@@ -1196,18 +1230,26 @@ class CopyTraderGUI(Frame):
                                         'quantity': IntVar(value=int(loaded_order_json[order]['order_quantity'])),
                                         'price':IntVar(value=0),
                                         'order_type':StringVar(value='LIMIT'),
-                                        'trading_symbol':trading_symbol
+                                        'trading_symbol':trading_symbol,
+                                        'trigger_price':DoubleVar()
                                 }
                             except Exception as e:
                                 self.multiple_mod_form_object_consolidated[account_hash] = {
                                         'quantity': IntVar(value=0),
                                         'price':IntVar(value=0),
                                         'order_type':StringVar(value='LIMIT'),
-                                        'trading_symbol':trading_symbol
+                                        'trading_symbol':trading_symbol,
+                                        'trigger_price':DoubleVar()
                                 }
                                 print(e)
+                            Radiobutton(order_frame,text='SL',variable=self.multiple_mod_form_object_consolidated[account_hash]['order_type'],value='SL').pack(side=RIGHT,fill=NONE)
                             Radiobutton(order_frame,text='Market',variable=self.multiple_mod_form_object_consolidated[account_hash]['order_type'],value='MARKET').pack(side=RIGHT,fill=NONE)
                             Radiobutton(order_frame,text='Limit',variable=self.multiple_mod_form_object_consolidated[account_hash]['order_type'],value='LIMIT').pack(side=RIGHT,fill=NONE)
+
+                            if 'trigger_price' in loaded_order_json[order]:
+                               self.multiple_mod_form_object_consolidated[account_hash]['order_type'].set('SL')
+                               self.multiple_mod_form_object_consolidated[account_hash]['trigger_price'].set(loaded_order_json[order]['trigger_price'])
+                               
                             Entry(order_frame,textvariable=self.multiple_mod_form_object_consolidated[account_hash]['quantity']).pack(side=RIGHT,fill=NONE)
                             order_frame.pack(side=TOP,fill=X)
                     label_frame.pack(side=TOP,fill=X)
@@ -1230,7 +1272,8 @@ class CopyTraderGUI(Frame):
             order_object = {
                 'price':self.multiple_mod_form_object_price_consolidated[key.split('#')[0]].get(),
                 'quantity':self.multiple_mod_form_object_consolidated[key]['quantity'].get(),
-                'order_type':self.multiple_mod_form_object_consolidated[key]['order_type'].get()
+                'order_type':self.multiple_mod_form_object_consolidated[key]['order_type'].get(),
+                'trigger_price': self.multiple_mod_form_object_trigger_price_consolidated[key.split('#')[0]].get()
             }
             print(order_object,account_number,exchange_order_id,'\n')
             for acc in self.listOfAccounts:
@@ -1256,10 +1299,13 @@ class CopyTraderGUI(Frame):
         print(state.get())
         for item in self.multiple_mod_form_object_consolidated.keys():
             if item.split('#')[0] == order_id:
-                if state.get() == 1:
-                    self.multiple_mod_form_object_consolidated[item]['order_type'].set('LIMIT')
-                else:
+                print(state.get())
+                if state.get() == 'SL':
+                    self.multiple_mod_form_object_consolidated[item]['order_type'].set('SL')
+                elif state.get() == 'MARKET':
                     self.multiple_mod_form_object_consolidated[item]['order_type'].set('MARKET')
+                elif state.get() == 'LIMIT':
+                    self.multiple_mod_form_object_consolidated[item]['order_type'].set('LIMIT')
     def delete_order_history(self):
         if self.order_db.delete_all_orders():
             self.recreate_running_orders_tree()
@@ -2049,11 +2095,18 @@ class CopyTraderGUI(Frame):
         rad2 = Radiobutton(order_type, text='Limit', command=(
             lambda: self.orderType()), variable=(self.mod_ordertype), value='LIMIT')
         rad2.pack(side=RIGHT, fill=NONE)
+        rad3 = Radiobutton(order_type, text='Stoploss', command=(
+            lambda: self.orderType()), variable=(self.mod_ordertype), value='SL')
+        rad3.pack(side=RIGHT, fill=NONE)
+        # rad3.configure(state=DISABLED)
         order_type.pack(side=TOP, fill=X)
         price_combo1 = Frame(self.order_modification_win,
                              height=300, width=100, padx=1, pady=5)
         labP = Label(price_combo1, width=10, text='Price')
         self.modified_price = Entry(price_combo1, width=10, text='Enter Price')
+        order_spec = json.loads(list_of_orders[0][2])
+        print(order_spec[account_number].get('trigger_price'))
+
         try:
             ltp = float(self.get_last_traded_price(json.loads(
                         list_of_orders[0][1])['tradingsymbol'], False))
@@ -2079,15 +2132,33 @@ class CopyTraderGUI(Frame):
         except Exception as e:
             print(e)
         price_combo2.pack(side=TOP, fill=X)
+        try:
+                price_combo3 = Frame(self.order_modification_win,
+                             height=300, width=100, padx=1, pady=5)
+                labSP = Label(price_combo3, width=10, text='Stop loss')
+                self.stoploss_price = Entry(price_combo3,width=10, text = 'Stop Loss')
+                labSP.pack(side=LEFT)
+                self.stoploss_price.pack(side=RIGHT)
+                price_combo3.pack(side=TOP,fill=X)
+                if 'trigger_price' in order_spec[account_number]:
+                    self.stoploss_price.delete(0,END)
+                    self.stoploss_price.insert(0,float(order_spec[account_number]['trigger_price']))
+                    self.mod_ordertype.set('SL')
+                else:
+                    self.stoploss_price.delete(0,END)
+                    self.stoploss_price.insert(0,float(0))
+        except Exception as e:
+            print(e)
         Button(self.order_modification_win, text='Modify Order', width=20, command=(lambda: self.modify_order(self.mod_ordertype.get(),
                                                                                                               self.modified_price.get(),
+                                                                                                              self.stoploss_price.get(),
                                                                                                               quantity=self.modified_quant.get(),
                                                                                                               account_number=account_number,
                                                                                                               exchange_order_id=exchange_order_id,
                                                                                                               time_stamp=time_stamp
                                                                                                               ))).pack(side=TOP, fill=X)
 
-    def modify_order(self, order_type, price, quantity, account_number, exchange_order_id,time_stamp):
+    def modify_order(self, order_type, price, trigger_price,quantity, account_number, exchange_order_id,time_stamp):
         order_object = {}
 
         print(price, quantity, '1149')
@@ -2097,6 +2168,8 @@ class CopyTraderGUI(Frame):
             order_object['price'] = float(price)
         if quantity != None and quantity != '' and float(quantity) != 0:
             order_object['quantity'] = int(quantity)
+        if trigger_price != None and trigger_price != '' and float(trigger_price) != 0:
+            order_object['trigger_price'] = float(trigger_price)
         print(order_object, 'order object')
         if showwarning('Copy Trader', 'Are you sure you want to modify this order?', parent=self.view_order_win) == 'ok':
             print('execute modify')
@@ -2113,7 +2186,10 @@ class CopyTraderGUI(Frame):
                                  parent=self.view_order_win)
                         if mod_response != None and mod_response['status'] == 'success':
                             self.update_order_status(
-                                            time_stamp, account_number,int(order_object['quantity']) ,'order_quantity')
+                                            time_stamp, account_number,int(order_object['quantity']) ,'order_quantity')                        
+                            self.update_order_status(
+                                                time_stamp, account_number,float(order_object['trigger_price']) ,'trigger_price')
+
                             self.order_modification_win.destroy()
                     except Exception as e:
                         print(e)
@@ -2202,6 +2278,10 @@ class CopyTraderGUI(Frame):
         order_quantity_by_account = {}
         print('Order :\n  variety = {0}\n  transactiontype = {1}\n  ordertype = {2}\n  producttype = {3} \n  duration = {4} \n  exchange = {5} \n  price = {6} \n  quantity = {7} \n  selected Instrument = {8} \n  symboltoken = {9} \n  tradingsymbol = {10} \n'.format(
             self.variety.get(), self.transactiontype.get(), self.ordertype.get(), self.producttype.get(), self.duration.get(), self.exchange.get(), self.entP.get(), self.entM.get(), instrument[2], instrument[1], instrument[0]))
+        print(self.entSL.get(),'entSL')
+        
+        if self.ordertype.get() == 'SL':
+            print(self.entSL.get(),'entSL')
         orderObject = {
             'variety': self.variety.get(),
             'tradingsymbol': instrument[1],
@@ -2217,7 +2297,7 @@ class CopyTraderGUI(Frame):
             'iceberg_legs': self.entIL.get(),
             'iceberg_quantity': self.entIQ.get(),
         }
-
+        
         if len(self.listOfAccounts) == 0:
             showinfo('Copy Trader', 'No accounts to execute orders')
             return
@@ -2239,6 +2319,9 @@ class CopyTraderGUI(Frame):
                             int(round(quantity_panel[acc.client_id].get())) *
                             int(self.entL.get())
                         )
+
+                        order_object_copy['iceberg_legs'] = int(self.account_iceberg_lot[acc.client_id].get())
+                        order_object_copy['iceberg_quantity'] = int(self.account_iceberg_quant[acc.client_id].get())
                         # print(order_object_copy,'557',quantity_panel[acc.client_id].get(),
                         # int(round(quantity_panel[acc.client_id].get())),int(self.entL.get()),
                         # int(round(quantity_panel[acc.client_id].get())) *
@@ -2246,6 +2329,12 @@ class CopyTraderGUI(Frame):
                         # )
                         post_order_success[acc.client_id] = acc.place_order(
                             order_object_copy)
+                        # post_order_success[acc.client_id] = {
+                        #     "status": "success",
+                        #     "data": {
+                        #     "order_id": "151220000000000"
+                        #     }
+                        # }
                     else:
                         # print(orderObject,'561')
                         post_order_success[acc.client_id] = acc.place_order(
@@ -2275,6 +2364,8 @@ class CopyTraderGUI(Frame):
                 sql_insertion_dump[key]['exchange_order_status'] = 'OPEN PENDING'
                 sql_insertion_dump[key]['order_quantity'] = int(order_quantity_by_account[key])
                 sql_insertion_dump[key]['fill_quantity'] = 0
+                if local_order_insertion_copy['ordertype'] == 'SL':
+                    sql_insertion_dump[key]['trigger_price'] = float(local_order_insertion_copy['triggerprice'])
         if len(sql_insertion_dump.keys()) > 0:
             self.order_db.insert_order((
                 local_order_insertion_date,

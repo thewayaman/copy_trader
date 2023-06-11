@@ -661,7 +661,7 @@ class Account(object):
         ordertype_converter = {
             'MARKET': 'MARKET',
             'LIMIT': 'LIMIT',
-            'STOPLOSS_LIMIT': "SL",
+            'SL': "SL",
             'STOPLOSS_MARKET': 'SL-M'
         }
         producttype_converter = {
