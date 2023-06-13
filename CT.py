@@ -159,15 +159,37 @@ class CopyTraderGUI(Frame):
                             print(
                                 account_level_orders[key]['status'], key, '####')
                             if account_level_orders != None and account_level_orders[key]['status'] != 'error' and task['data']['account_id'] == key and task['data']['order_id'] == account_level_orders[key]['data']['order_id']:
-                                print(task['data']['account_id'], key, task['data']
-                                      ['order_id'], account_level_orders[key]['data']['order_id'])
-                                self.update_order_status(
-                                    item[0], key, task['data']['status'],'exchange_order_status')
-                                self.update_order_status(
-                                    item[0], key, task['data']['filled_quantity'],'fill_quantity')
+                                if task['data']['meta'] != None and 'iceberg' in  task['data']['meta']:
+                                    self.update_order_status(
+                                        item[0], key, 'UPDATE','exchange_order_status')
+                                    self.update_order_status(
+                                        item[0], key, task['data']['meta']['iceberg']['total_quantity'] - task['data']['meta']['iceberg']['remaining_quantity'],'fill_quantity')
+                                else:
+                                    print(task['data']['account_id'], key, task['data']
+                                        ['order_id'], account_level_orders[key]['data']['order_id'])
+                                    self.update_order_status(
+                                        item[0], key, task['data']['status'],'exchange_order_status')
+                                    self.update_order_status(
+                                        item[0], key, task['data']['filled_quantity'],'fill_quantity')
                                 if task['data']['status'] == 'COMPLETE' or task['data']['status'] == 'UPDATE':
                                     self.recreate_open_position_tree_for_account(
                                         key)
+                                is_task_done = True
+                            if account_level_orders != None and account_level_orders[key]['status'] != 'error' and task['data']['account_id'] == key and task['data']['parent_order_id'] == account_level_orders[key]['data']['order_id']:
+                                if task['data']['meta'] != None and 'iceberg' in  task['data']['meta']:
+                                    status = 'UPDATE'
+                                    filled_quant = task['data']['meta']['iceberg']['total_quantity'] - task['data']['meta']['iceberg']['remaining_quantity']
+                                    if task['data']['status'] == 'REJECTED' or task['data']['status'] == 'CANCELLED':
+                                        status = 'REJECTED'
+                                    if task['data']['meta']['iceberg']['remaining_quantity'] == 0 and task['data']['status'] == 'COMPLETE':
+                                        status = 'COMPLETE'
+                                    if status != 'REJECTED' or status != 'CANCELLED':
+                                        self.update_order_status(
+                                            item[0], key, filled_quant,'fill_quantity')
+                                    self.update_order_status(
+                                        item[0], key, status,'exchange_order_status')
+
+
                                 is_task_done = True
             if is_task_done == False:
                 self.threaded_queue.put(task)
@@ -640,8 +662,9 @@ class CopyTraderGUI(Frame):
                     if quant < 5:
                         quant = 5
                     self.account_iceberg_lot[elem].set(3)
-                    self.account_iceberg_quant[elem].set(quant)
+                    self.account_iceberg_quant[elem].set(round((quant/3)) * int(self.entL.get()))
                 else:
+                
                     self.account_iceberg_lot[elem].set(0)
                     self.account_iceberg_quant[elem].set(0)
                 quantity_panel[elem].set(quant)
@@ -2132,6 +2155,7 @@ class CopyTraderGUI(Frame):
         except Exception as e:
             print(e)
         price_combo2.pack(side=TOP, fill=X)
+        # TODO: disable quantity
         try:
                 price_combo3 = Frame(self.order_modification_win,
                              height=300, width=100, padx=1, pady=5)
@@ -2186,9 +2210,11 @@ class CopyTraderGUI(Frame):
                                  parent=self.view_order_win)
                         if mod_response != None and mod_response['status'] == 'success':
                             self.update_order_status(
-                                            time_stamp, account_number,int(order_object['quantity']) ,'order_quantity')                        
-                            self.update_order_status(
-                                                time_stamp, account_number,float(order_object['trigger_price']) ,'trigger_price')
+                                            time_stamp, account_number,int(order_object['quantity']) ,'order_quantity')     
+                                            
+                            if 'trigger_price' in order_object:
+                                self.update_order_status(
+                                                    time_stamp, account_number,float(order_object['trigger_price']) ,'trigger_price')
 
                             self.order_modification_win.destroy()
                     except Exception as e:
