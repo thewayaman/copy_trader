@@ -347,11 +347,11 @@ class Account(object):
             "data": {
                 "net": [
                     {
-                        "tradingsymbol": "NIFTY23APR15750CE",
+                        "tradingsymbol": "NIFTY23JUN20200PE",
                         "exchange": "NFO",
-                        "instrument_token": 53496327,
+                        "instrument_token": 9028866,
                         "product": "NRML",
-                        "quantity": 300,
+                        "quantity": 250,
                         "overnight_quantity": 0,
                         "multiplier": 1000,
                         "average_price": 161.05,
@@ -378,9 +378,9 @@ class Account(object):
                         "day_sell_value": 0
                     },
                     {
-                        "tradingsymbol": "BHARTIARTL23MAY850CE",
+                        "tradingsymbol": "EURINR23AUG85CE",
                         "exchange": "NFO",
-                        "instrument_token": 53505799,
+                        "instrument_token": 542418438,
                         "product": "NRML",
                         "quantity": 0,
                         "overnight_quantity": 3,
@@ -409,9 +409,9 @@ class Account(object):
                         "day_sell_value": 93360
                     },
                     {
-                        "tradingsymbol": "BHEL23APR86PE",
+                        "tradingsymbol": "PIDILITIND23JUN1960CE",
                         "exchange": "NFO",
-                        "instrument_token": 779521,
+                        "instrument_token": 40671234,
                         "product": "CO",
                         "quantity": -21000,
                         "overnight_quantity": 0,
