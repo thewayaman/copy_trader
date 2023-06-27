@@ -360,7 +360,11 @@ class CopyTraderGUI(Frame):
                     textvariable=self.account_iceberg_lot[acc.client_id],
                     width=4)
                 iceberg_leg_entry.pack(side=LEFT, fill=NONE)
-
+                
+                iceberg_leg_entry.bind(
+                    '<KeyRelease>', (lambda e: self.calculate_iceberg_lots(
+                        account_quantity_panel
+                    )))
                 iceberg_quantity_label = Label(
                     iceberg_frame, text='Qty',
                     width=5)
@@ -631,29 +635,19 @@ class CopyTraderGUI(Frame):
                           account_quantity_panel,
                           account_risk_setting)
 
-    def multiplyLots(self, riskpanel, quantity_panel, risk_setting):
+    def multiplyLots(self, riskpanel, quantity_panel,rp):
         """  account_riskpanel,
             account_quantity_panel,
             account_risk_setting """
-        # print(type(self.entM.get()),'391 multiply lot')
-        # if isinstance(self.entM.get(),str):
-        #     showwarning('Copy Trader','Please provide a valid value for multiples')
-        #     return
         if self.entM.get() != '' and self.entL.get() != '':
             print(type(self.entM.get()), type(self.entL.get()))
             self.entQ.delete(0, END)
             self.entQ.insert(0, int(float(self.entM.get()))
                              * int(float(self.entL.get())))
         print(self.entM)
-        account_risk_matrix = {
-            'low': 0,
-            'medium': 0,
-            'high': 0
-        }
        
         if quantity_panel.values() != 0:
             for elem in quantity_panel.keys():
-                # print(risk_setting[elem].lower(), elem, account_risk_matrix)
                 quant = 0
                 if self.order_level_risk_checkbox.get() == False:
                     quant = round(float(0 if self.entM.get() == '' else self.entM.get())
@@ -677,7 +671,27 @@ class CopyTraderGUI(Frame):
                 #     account_risk_matrix[risk_setting[elem]],
                 #     self.order_level_risk_category.get()
                 # )
-
+    def calculate_iceberg_lots(self,quantity_panel):
+        if self.entM.get() != '' and self.entL.get() != '':
+            print(type(self.entM.get()), type(self.entL.get()))
+            self.entQ.delete(0, END)
+            self.entQ.insert(0, int(float(self.entM.get()))
+                             * int(float(self.entL.get())))
+        print(self.entM)
+       
+        if quantity_panel.values() != 0:
+            for elem in quantity_panel.keys():
+                quant = int(quantity_panel[elem].get())
+                if self.variety.get() == 'ICEBERG':
+                    if quant < 5:
+                        quant = 5
+                    print(round((quant/self.account_iceberg_lot[elem].get())),quant,self.account_iceberg_lot[elem].get(),int(self.entL.get()))
+                    self.account_iceberg_quant[elem].set(round((quant/self.account_iceberg_lot[elem].get())) * int(self.entL.get()))
+                else:
+                    self.account_iceberg_lot[elem].set(0)
+                    self.account_iceberg_quant[elem].set(0)
+                
+        pass
     def loadPositionScreen(self):
         if self.is_view_order_win_initial_load == False:
             self.view_order_win.destroy()
@@ -1012,7 +1026,19 @@ class CopyTraderGUI(Frame):
             exit_total_quant.configure(state='disable')
             print(int(float(exit_quant.get()))
                   * int(float(exit_lot.get())), exit_total_quant.get())
-
+    
+    def calculate_iceberg_lots_generic(self,variety):
+        quant = int(float(self.exit_lot.get()))
+        if variety.get() == 'iceberg':
+            if quant < 5:
+                quant = 5
+            self.exit_iceberg_quantity.delete(0,END)
+            self.exit_iceberg_quantity.insert(0,round(quant/int(self.exit_iceberg_lot.get())) * int(self.exit_quant.get()))
+        else:
+            self.exit_iceberg_lot.delete(0,END)
+            self.exit_iceberg_quantity.delete(0,END)
+            self.exit_iceberg_lot.insert(0,0)
+            self.exit_iceberg_quantity.insert(0,0)
     def exit_position_single(self, parent_tree_id, trade_values_array,action_type = 'exit'):
         
         print(self.openPositionsTree.get_children(parent_tree_id), 'MMMMMMMMMM')
@@ -1135,7 +1161,8 @@ class CopyTraderGUI(Frame):
         self.exit_iceberg_lot = Entry(price_combo1, width=5, text='Lots')
         labIL.pack(side=LEFT)
         self.exit_iceberg_lot.pack(side=LEFT)
-
+        self.exit_iceberg_lot.bind(
+            '<KeyRelease>', (lambda e: self.calculate_iceberg_lots_generic(self.exit_varietytype)))
 
         labIQ = Label(price_combo1, width=15, text='Iceberg Quantity')
         self.exit_iceberg_quantity = Entry(price_combo1, width=10, text='Iceberg Quantity')
@@ -1260,6 +1287,7 @@ class CopyTraderGUI(Frame):
         self.multiple_mod_form_object_consolidated = {}
         self.multiple_mod_form_object_price_consolidated = {}
         self.multiple_mod_form_object_trigger_price_consolidated = {}
+        self.multiple_mod_form_object_order_variety_consolidated = {}
         if len(accounts_by_order_id.keys()) > 0:
             for item in accounts_by_order_id.keys():
                 if item not in exchange_order_ids_by_account:
@@ -1325,7 +1353,9 @@ class CopyTraderGUI(Frame):
                             quantEntry.pack(side=RIGHT,fill=NONE)
                             if 'variety' in loaded_order_json[order] and loaded_order_json[order]['variety'] == 'iceberg':
                                 quantEntry.configure(state='disabled')
-                            
+                                self.multiple_mod_form_object_order_variety_consolidated[account_hash] = 'iceberg'
+                            else:
+                                self.multiple_mod_form_object_order_variety_consolidated[account_hash] = 'regular'
                             order_frame.pack(side=TOP,fill=X)
                     label_frame.pack(side=TOP,fill=X)
                     print(loaded_order_json,'\n')
@@ -1350,6 +1380,8 @@ class CopyTraderGUI(Frame):
                 'order_type':self.multiple_mod_form_object_consolidated[key]['order_type'].get(),
                 'trigger_price': self.multiple_mod_form_object_trigger_price_consolidated[key.split('#')[0]].get()
             }
+            if self.multiple_mod_form_object_order_variety_consolidated[key] == 'iceberg':
+                del order_object['quantity']
             print(order_object,account_number,exchange_order_id,'\n')
             for acc in self.listOfAccounts:
                     # print(acc.client_id,account_number,'delete_order_single')
@@ -1358,11 +1390,16 @@ class CopyTraderGUI(Frame):
                         is_account_logged_in = True
                         try:
                             mod_response = acc.modify_order(
-                                exchange_order_id, order_object, 'regular')
+                                exchange_order_id, order_object, 
+                                self.multiple_mod_form_object_order_variety_consolidated[key])
                             post_order_screens[account_number + ' ' + self.multiple_mod_form_object_consolidated[key]['trading_symbol']] = mod_response
                             if mod_response != None and mod_response['status'] == 'success':
-                                self.update_order_status(
-                                            order_id, account_number,int(order_object['quantity']) ,'order_quantity')
+                                if 'quantity' in order_object:
+                                    self.update_order_status(
+                                                        order_id, account_number,float(order_object['quantity']) ,'order_quantity')
+                                if 'trigger_price' in order_object:
+                                    self.update_order_status(
+                                                        order_id, account_number,float(order_object['trigger_price']) ,'trigger_price')
                         except Exception as e:
                             print(e)
                             post_order_screens[account_number + ' ' + self.multiple_mod_form_object_consolidated[key]['trading_symbol']] = e
@@ -1749,7 +1786,9 @@ class CopyTraderGUI(Frame):
                                                                 textvariable=self.form_object_consolidate[keychar]['iceberg_legs']))
                 labIL.pack(side=LEFT)
                 self.form_object_elements[keychar][-1].pack(side=LEFT)
-
+                # calculate_multiple_iceberg_lots_keys
+                self.form_object_elements[keychar][-1].bind('<KeyRelease>', (
+                    lambda e, keys=keychar, quant_ref=self.form_object_elements[keychar][-1]: self.calculate_multiple_iceberg_lots_keys(iceberg_var.get())))
                 labIQ = Label(price_combo2, width=15, text='Iceberg Quantity')
                 self.form_object_elements[keychar].append(Entry(price_combo2, width=5, text='Enter Iceberg Quantity',
                                                                 textvariable=self.form_object_consolidate[keychar]['iceberg_quantity']))
@@ -1783,6 +1822,18 @@ class CopyTraderGUI(Frame):
                 if quant >= 5:
                     self.form_object_consolidate[item]['iceberg_legs'].set(3)
                     self.form_object_consolidate[item]['iceberg_quantity'].set(round((quant/3)) * int(self.form_object_consolidate[item]['quantity'].get()))
+            else:
+                self.form_object_consolidate[item]['iceberg_legs'].set(0)
+                self.form_object_consolidate[item]['iceberg_quantity'].set(0)
+    def calculate_multiple_iceberg_lots_keys(self,event):
+        print(self.form_object_elements,self.form_object_consolidate)
+        for item in self.form_object_consolidate:
+            if event == 1:
+                quant = int(self.form_object_elements[item][1].get())
+                if quant >= 5:
+                    self.form_object_consolidate[item]['iceberg_quantity'].set(
+                        round((quant/self.form_object_consolidate[item]['iceberg_legs'].get()))
+                         * int(self.form_object_consolidate[item]['quantity'].get()))
             else:
                 self.form_object_consolidate[item]['iceberg_legs'].set(0)
                 self.form_object_consolidate[item]['iceberg_quantity'].set(0)
@@ -2076,6 +2127,7 @@ class CopyTraderGUI(Frame):
             print(e)
         price_combo2.pack(side=TOP, fill=X)
         # TODO: disable quantity
+        order_variety = 'regular'
         try:
                 price_combo3 = Frame(self.order_modification_win,
                              height=300, width=100, padx=1, pady=5)
@@ -2094,6 +2146,7 @@ class CopyTraderGUI(Frame):
 
                 if 'variety' in order_spec[account_number] and order_spec[account_number]['variety'] == 'iceberg':
                     self.modified_quant.configure(state='disabled')
+                    order_variety = 'iceberg'
         except Exception as e:
             print(e)
         Button(self.order_modification_win, text='Modify Order', width=20, command=(lambda: self.modify_order(self.mod_ordertype.get(),
@@ -2102,10 +2155,11 @@ class CopyTraderGUI(Frame):
                                                                                                               quantity=self.modified_quant.get(),
                                                                                                               account_number=account_number,
                                                                                                               exchange_order_id=exchange_order_id,
-                                                                                                              time_stamp=time_stamp
+                                                                                                              time_stamp=time_stamp,
+                                                                                                              order_variety=order_variety
                                                                                                               ))).pack(side=TOP, fill=X)
 
-    def modify_order(self, order_type, price, trigger_price,quantity, account_number, exchange_order_id,time_stamp):
+    def modify_order(self, order_type, price, trigger_price,quantity, account_number, exchange_order_id,time_stamp,order_variety):
         order_object = {}
 
         print(price, quantity, '1149')
@@ -2117,6 +2171,8 @@ class CopyTraderGUI(Frame):
             order_object['quantity'] = int(quantity)
         if trigger_price != None and trigger_price != '' and float(trigger_price) != 0:
             order_object['trigger_price'] = float(trigger_price)
+        if order_variety == 'iceberg':
+            del order_object['quantity']
         print(order_object, 'order object')
         if showwarning('Copy Trader', 'Are you sure you want to modify this order?', parent=self.view_order_win) == 'ok':
             print('execute modify')
@@ -2128,12 +2184,13 @@ class CopyTraderGUI(Frame):
                     is_account_logged_in = True
                     try:
                         mod_response = acc.modify_order(
-                            exchange_order_id, order_object, 'regular')
+                            exchange_order_id, order_object, order_variety)
                         showinfo('Modify Order', mod_response,
                                  parent=self.view_order_win)
                         if mod_response != None and mod_response['status'] == 'success':
-                            self.update_order_status(
-                                            time_stamp, account_number,int(order_object['quantity']) ,'order_quantity')     
+                            if 'quantity' in order_object:
+                                self.update_order_status(
+                                                time_stamp, account_number,int(order_object['quantity']) ,'order_quantity')     
                                             
                             if 'trigger_price' in order_object:
                                 self.update_order_status(
