@@ -1,4 +1,5 @@
 import logging
+from math import ceil
 from tkinter import ttk
 from requests import get
 import http.client
@@ -345,13 +346,18 @@ class CopyTraderGUI(Frame):
                 local_checkbox = Checkbutton(
                     non_ice_frame, text='Active', var=(account_orderplacement_panel[acc.client_id]))
                 local_checkbox.pack(side=LEFT)
-
+                
                 local_entry = Entry(
                     non_ice_frame, textvariable=account_quantity_panel[acc.client_id], width=10)
                 local_entry.pack(side=LEFT)
+                local_entry.bind(
+                    '<KeyRelease>', (lambda e: self.calculate_iceberg_lots(
+                        account_quantity_panel
+                    )))
                 iceberg_frame = Frame(
                     account_frame
                 )
+                
                 iceberg_leg_label = Label(
                     iceberg_frame, text='Leg', width=5)
                 iceberg_leg_label.pack(side=LEFT, fill=NONE)
@@ -686,7 +692,7 @@ class CopyTraderGUI(Frame):
                     if quant < 5:
                         quant = 5
                     print(round((quant/self.account_iceberg_lot[elem].get())),quant,self.account_iceberg_lot[elem].get(),int(self.entL.get()))
-                    self.account_iceberg_quant[elem].set(round((quant/self.account_iceberg_lot[elem].get())) * int(self.entL.get()))
+                    self.account_iceberg_quant[elem].set(ceil((quant/self.account_iceberg_lot[elem].get())) * int(self.entL.get()))
                 else:
                     self.account_iceberg_lot[elem].set(0)
                     self.account_iceberg_quant[elem].set(0)
@@ -1033,7 +1039,7 @@ class CopyTraderGUI(Frame):
             if quant < 5:
                 quant = 5
             self.exit_iceberg_quantity.delete(0,END)
-            self.exit_iceberg_quantity.insert(0,round(quant/int(self.exit_iceberg_lot.get())) * int(self.exit_quant.get()))
+            self.exit_iceberg_quantity.insert(0,ceil(quant/int(self.exit_iceberg_lot.get())) * int(self.exit_quant.get()))
         else:
             self.exit_iceberg_lot.delete(0,END)
             self.exit_iceberg_quantity.delete(0,END)
@@ -1156,9 +1162,9 @@ class CopyTraderGUI(Frame):
         self.exit_price.pack(side=LEFT)
 
 
-        labIL = Label(price_combo1, width=5, text='Lots')
+        labIL = Label(price_combo1, width=5, text='Legs')
 
-        self.exit_iceberg_lot = Entry(price_combo1, width=5, text='Lots')
+        self.exit_iceberg_lot = Entry(price_combo1, width=5, text='Legs')
         labIL.pack(side=LEFT)
         self.exit_iceberg_lot.pack(side=LEFT)
         self.exit_iceberg_lot.bind(
@@ -1190,8 +1196,11 @@ class CopyTraderGUI(Frame):
         self.exit_lot.delete(0, END)
         self.exit_lot.insert(
             0, abs(int(trade_values_array[2]))/int(instrument_response[0][8]))
+        def combineFunctions(self):
+            self.calculate_iceberg_lots_generic(self.exit_varietytype)
+            self.multiply_instrument_lots()
         self.exit_lot.bind(
-            '<KeyRelease>', (lambda e: self.multiply_instrument_lots()))
+            '<KeyRelease>', (lambda e: combineFunctions(self)))
         labM.pack(side=LEFT)
         self.exit_lot.pack(side=LEFT)
 
@@ -1236,7 +1245,7 @@ class CopyTraderGUI(Frame):
             print(self.exit_lot.get(),self.exit_quant.get())
             if int(float(self.exit_lot.get())) >= 5:
                 self.exit_iceberg_lot.insert(0,3)
-                self.exit_iceberg_quantity.insert(0, round(int(float(self.exit_lot.get())/3)) * int(self.exit_quant.get()))
+                self.exit_iceberg_quantity.insert(0, ceil(int(float(self.exit_lot.get())/3)) * int(self.exit_quant.get()))
         else:
             self.exit_iceberg_lot.insert(0,0)
             self.exit_iceberg_quantity.insert(0, 0)
@@ -1802,12 +1811,15 @@ class CopyTraderGUI(Frame):
                 self.form_object_elements[keychar][-1].pack(side=LEFT)
 
                 price_combo2.pack(side=LEFT, fill=NONE)
+                def combinedFuntion(self,keys,quant_ref,iceberg_var):
+                    self.multiply_generic(keys, quant_ref) 
+                    self.calculate_multiple_iceberg_lots_keys(iceberg_var.get())
                 self.multiply_generic(
                     keychar, self.form_object_elements[keychar][-1])
                 self.form_object_elements[keychar][1].configure(command=(
-                    lambda keys=keychar, quant_ref=self.form_object_elements[keychar][-1]: self.multiply_generic(keys, quant_ref)))
+                    lambda keys=keychar, quant_ref=self.form_object_elements[keychar][-1]: combinedFuntion(self,keys,quant_ref,iceberg_var)))
                 self.form_object_elements[keychar][1].bind('<KeyRelease>', (
-                    lambda e, keys=keychar, quant_ref=self.form_object_elements[keychar][-1]: self.multiply_generic(keys, quant_ref)))
+                    lambda e, keys=keychar, quant_ref=self.form_object_elements[keychar][-1]: combinedFuntion(self,keys,quant_ref,iceberg_var)))
         execute_exit_button.config(command=self.run_multiple_exit)
 
     def toggle_limit_form_keys(self,event):
@@ -1821,7 +1833,7 @@ class CopyTraderGUI(Frame):
                 quant = int(self.form_object_elements[item][1].get())
                 if quant >= 5:
                     self.form_object_consolidate[item]['iceberg_legs'].set(3)
-                    self.form_object_consolidate[item]['iceberg_quantity'].set(round((quant/3)) * int(self.form_object_consolidate[item]['quantity'].get()))
+                    self.form_object_consolidate[item]['iceberg_quantity'].set(ceil((quant/3)) * int(self.form_object_consolidate[item]['quantity'].get()))
             else:
                 self.form_object_consolidate[item]['iceberg_legs'].set(0)
                 self.form_object_consolidate[item]['iceberg_quantity'].set(0)
@@ -1832,7 +1844,7 @@ class CopyTraderGUI(Frame):
                 quant = int(self.form_object_elements[item][1].get())
                 if quant >= 5:
                     self.form_object_consolidate[item]['iceberg_quantity'].set(
-                        round((quant/self.form_object_consolidate[item]['iceberg_legs'].get()))
+                        ceil((quant/self.form_object_consolidate[item]['iceberg_legs'].get()))
                          * int(self.form_object_consolidate[item]['quantity'].get()))
             else:
                 self.form_object_consolidate[item]['iceberg_legs'].set(0)

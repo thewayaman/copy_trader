@@ -347,7 +347,7 @@ class Account(object):
             "data": {
                 "net": [
                     {
-                        "tradingsymbol": "NIFTY23JUN20200PE",
+                        "tradingsymbol": "NIFTY23JUL20150PE",
                         "exchange": "NFO",
                         "instrument_token": 9028866,
                         "product": "NRML",
@@ -378,7 +378,7 @@ class Account(object):
                         "day_sell_value": 0
                     },
                     {
-                        "tradingsymbol": "EURINR23AUG85CE",
+                        "tradingsymbol": "EURINR23DEC93CE",
                         "exchange": "NFO",
                         "instrument_token": 542418438,
                         "product": "NRML",
@@ -409,7 +409,7 @@ class Account(object):
                         "day_sell_value": 93360
                     },
                     {
-                        "tradingsymbol": "PIDILITIND23JUN1960CE",
+                        "tradingsymbol": "HDFCGROWTH",
                         "exchange": "NFO",
                         "instrument_token": 40671234,
                         "product": "CO",
