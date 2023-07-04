@@ -409,11 +409,11 @@ class Account(object):
                         "day_sell_value": 93360
                     },
                     {
-                        "tradingsymbol": "HDFCGROWTH",
+                        "tradingsymbol": "BHARTIARTL23JULFUT",
                         "exchange": "NFO",
-                        "instrument_token": 40671234,
+                        "instrument_token": 10954498,
                         "product": "CO",
-                        "quantity": -21000,
+                        "quantity": -10450,
                         "overnight_quantity": 0,
                         "multiplier": 1,
                         "average_price": 0,

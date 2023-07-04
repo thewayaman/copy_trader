@@ -159,36 +159,41 @@ class CopyTraderGUI(Frame):
                         for key in account_level_orders.keys():
                             print(
                                 account_level_orders[key]['status'], key, '####')
-                            if account_level_orders != None and account_level_orders[key]['status'] != 'error' and task['data']['account_id'] == key and task['data']['order_id'] == account_level_orders[key]['data']['order_id']:
-                                if task['data']['meta'] != None and 'iceberg' in  task['data']['meta']:
-                                    self.update_order_status(
-                                        item[0], key, 'UPDATE','exchange_order_status')
-                                    self.update_order_status(
-                                        item[0], key, task['data']['meta']['iceberg']['total_quantity'] - task['data']['meta']['iceberg']['remaining_quantity'],'fill_quantity')
-                                else:
-                                    print(task['data']['account_id'], key, task['data']
-                                        ['order_id'], account_level_orders[key]['data']['order_id'])
-                                    self.update_order_status(
-                                        item[0], key, task['data']['status'],'exchange_order_status')
-                                    self.update_order_status(
-                                        item[0], key, task['data']['filled_quantity'],'fill_quantity')
-                                if task['data']['status'] == 'COMPLETE' or task['data']['status'] == 'UPDATE':
-                                    self.recreate_open_position_tree_for_account(
-                                        key)
-                                is_task_done = True
-                            if account_level_orders != None and account_level_orders[key]['status'] != 'error' and task['data']['account_id'] == key and task['data']['parent_order_id'] == account_level_orders[key]['data']['order_id']:
-                                if task['data']['meta'] != None and 'iceberg' in  task['data']['meta']:
-                                    status = 'UPDATE'
-                                    filled_quant = task['data']['meta']['iceberg']['total_quantity'] - task['data']['meta']['iceberg']['remaining_quantity']
-                                    if task['data']['status'] == 'REJECTED' or task['data']['status'] == 'CANCELLED':
-                                        status = 'REJECTED'
-                                    if task['data']['meta']['iceberg']['remaining_quantity'] == 0 and task['data']['status'] == 'COMPLETE':
-                                        status = 'COMPLETE'
-                                    if status != 'REJECTED' or status != 'CANCELLED':
+                            if account_level_orders != None and account_level_orders[key]['status'] != 'error' and task['data']['account_id'] == key:
+                                if task['data']['order_id'] == account_level_orders[key]['data']['order_id']:
+                                    if task['data']['meta'] != None and 'iceberg' in  task['data']['meta']:
                                         self.update_order_status(
-                                            item[0], key, filled_quant,'fill_quantity')
-                                    self.update_order_status(
-                                        item[0], key, status,'exchange_order_status')
+                                            item[0], key, 'UPDATE','exchange_order_status')
+                                        self.update_order_status(
+                                            item[0], key, task['data']['meta']['iceberg']['total_quantity'] - task['data']['meta']['iceberg']['remaining_quantity'],'fill_quantity')
+                                    else:
+                                        print(task['data']['account_id'], key, task['data']
+                                            ['order_id'], account_level_orders[key]['data']['order_id'])
+                                        self.update_order_status(
+                                            item[0], key, task['data']['status'],'exchange_order_status')
+                                        self.update_order_status(
+                                            item[0], key, task['data']['filled_quantity'],'fill_quantity')
+                                    if task['data']['status'] == 'COMPLETE' or task['data']['status'] == 'UPDATE':
+                                        self.recreate_open_position_tree_for_account(
+                                            key)
+                                    is_task_done = True
+                                if task['data']['parent_order_id'] == account_level_orders[key]['data']['order_id'] or ('parent_order_id' in account_level_orders[key] and task['data']['parent_order_id'] == account_level_orders[key]['parent_order_id']):
+                                    if task['data']['meta'] != None and 'iceberg' in  task['data']['meta']:
+                                        status = 'UPDATE'
+                                        filled_quant = task['data']['meta']['iceberg']['total_quantity'] - task['data']['meta']['iceberg']['remaining_quantity']
+                                        if task['data']['status'] == 'REJECTED' or task['data']['status'] == 'CANCELLED':
+                                            status = 'REJECTED'
+                                        if task['data']['meta']['iceberg']['remaining_quantity'] == 0 and task['data']['status'] == 'COMPLETE':
+                                            status = 'COMPLETE'
+                                        if status != 'REJECTED' or status != 'CANCELLED':
+                                            self.update_order_status(
+                                                item[0], key, filled_quant,'fill_quantity')
+                                        self.update_order_status(
+                                            item[0], key, status,'exchange_order_status')
+                                        self.update_order_status(
+                                            item[0], key, task['data']['parent_order_id'],'parent_order_id')
+                                        self.update_order_status(
+                                            item[0], key, task['data']['order_id'],'order_id')
 
 
                                 is_task_done = True
@@ -658,13 +663,15 @@ class CopyTraderGUI(Frame):
                 if self.order_level_risk_checkbox.get() == False:
                     quant = round(float(0 if self.entM.get() == '' else self.entM.get())
                             * riskpanel[elem][self.order_level_risk_category.get().lower()] / 100)
+                    # print(self.entM.get(),riskpanel[elem],riskpanel[elem][self.order_level_risk_category.get().lower()],quant)
+
                 else:
                     quant = round(float(0 if self.entM.get() == '' else self.entM.get()))
                 if self.variety.get() == 'ICEBERG':
                     if quant < 5:
                         quant = 5
                     self.account_iceberg_lot[elem].set(3)
-                    self.account_iceberg_quant[elem].set(round((quant/3)) * int(self.entL.get()))
+                    self.account_iceberg_quant[elem].set(ceil((quant/3)) * int(self.entL.get()))
                 else:
                 
                     self.account_iceberg_lot[elem].set(0)
@@ -908,20 +915,24 @@ class CopyTraderGUI(Frame):
                             internal_order_object = json.loads(internal_order[2])
                         
                             # print(order != None and type(order) is dict and (order['placed_by'] in internal_order_object) and internal_order_object[order['placed_by']]['data']['order_id'] != None and internal_order_object[order['placed_by']]['data']['order_id'] == order['order_id'],'820')
-                            
-                            if order != None and type(order) is dict and (order['placed_by'] in internal_order_object) and internal_order_object[order['placed_by']]['data']['order_id'] != None and internal_order_object[order['placed_by']]['data']['order_id'] == order['order_id']:
-                                print(json.loads(internal_order[2]),'823')
-                                self.update_order_status(
-                                                            internal_order[0], order['placed_by'], order['status'],'exchange_order_status',False)
-                                self.update_order_status(
-                                                            internal_order[0], order['placed_by'], order['filled_quantity'],'fill_quantity',False)
-                            if order != None and type(order) is dict and (order['placed_by'] in internal_order_object) and internal_order_object[order['placed_by']]['data']['order_id'] != None and internal_order_object[order['placed_by']]['data']['order_id'] == order['parent_order_id']:
-                                print(json.loads(internal_order[2]),'823')
-                                self.update_order_status(
-                                                            internal_order[0], order['placed_by'], 'COMPLETE' if order['meta']['iceberg']['remaining_quantity'] == 0 else 'PARTIALLY FILLED'
-                                                            ,'exchange_order_status',False)
-                                self.update_order_status(
-                                                            internal_order[0], order['placed_by'], order['meta']['iceberg']['total_quantity'] - order['meta']['iceberg']['remaining_quantity'],'fill_quantity',False)
+                            if order != None and type(order) is dict and (order['placed_by'] in internal_order_object) and internal_order_object[order['placed_by']]['data']['order_id'] != None:
+                                if internal_order_object[order['placed_by']]['data']['order_id'] == order['order_id']:
+                                    print(json.loads(internal_order[2]),'823')
+                                    self.update_order_status(
+                                                                internal_order[0], order['placed_by'], order['status'],'exchange_order_status',False)
+                                    self.update_order_status(
+                                                                internal_order[0], order['placed_by'], order['filled_quantity'],'fill_quantity',False)
+                                if internal_order_object[order['placed_by']]['data']['order_id'] == order['parent_order_id'] or ('parent_order_id' in internal_order_object[order['placed_by']] and internal_order_object['parent_order_id'] == order['parent_order_id']) :
+                                    print(json.loads(internal_order[2]),'823')
+                                    self.update_order_status(
+                                                                internal_order[0], order['placed_by'], 'COMPLETE' if order['meta']['iceberg']['remaining_quantity'] == 0 else 'PARTIALLY FILLED'
+                                                                ,'exchange_order_status',False)
+                                    self.update_order_status(
+                                                                internal_order[0], order['placed_by'], order['meta']['iceberg']['total_quantity'] - order['meta']['iceberg']['remaining_quantity'],'fill_quantity',False)
+                                    self.update_order_status(
+                                                                internal_order[0], order['placed_by'], order['parent_order_id'] ,'parent_order_id',False)
+                                    self.update_order_status(
+                                                                internal_order[0], order['placed_by'], order['order_id'] ,'order_id',False)
                         except Exception as e:
                             print(e,'824',order,internal_order_object)
         except Exception as e:
@@ -1245,7 +1256,7 @@ class CopyTraderGUI(Frame):
             print(self.exit_lot.get(),self.exit_quant.get())
             if int(float(self.exit_lot.get())) >= 5:
                 self.exit_iceberg_lot.insert(0,3)
-                self.exit_iceberg_quantity.insert(0, ceil(int(float(self.exit_lot.get())/3)) * int(self.exit_quant.get()))
+                self.exit_iceberg_quantity.insert(0, ceil(float(self.exit_lot.get())/3) * int(self.exit_quant.get()))
         else:
             self.exit_iceberg_lot.insert(0,0)
             self.exit_iceberg_quantity.insert(0, 0)
@@ -2072,6 +2083,10 @@ class CopyTraderGUI(Frame):
             if object_key in loaded_order_json :
                 loaded_order_json[object_key] = status
                 print(status, loaded_order_json[object_key], '1149')
+            if object_key == 'parent_order_id':
+                loaded_order_json[object_key] = status
+            if object_key == 'order_id':
+                loaded_order_json['data']['order_id'] = status
         self.order_db.update_order_status(
             json.dumps(loaded_order_wise_json), order_id)
         if recreate :
