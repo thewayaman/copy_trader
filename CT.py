@@ -1228,7 +1228,7 @@ class CopyTraderGUI(Frame):
         btn_text = 'Exit Position'
         if action_type != 'exit':
             btn_text = 'Add Position'
-        exit_object = {
+        """ exit_object = {
             'tradingsymbol': trade_values_array[0],
                        'exchange': instrument_response[0][11],
                        'transaction_type': self.exit_transactiontype.get(),
@@ -1242,11 +1242,21 @@ class CopyTraderGUI(Frame):
         if self.exit_iceberg_quantity.get() != '' and self.exit_iceberg_quantity.get() != None and int(self.exit_iceberg_quantity.get()) >= 5 and self.exit_iceberg_lot.get() != '' and self.exit_iceberg_lot.get() != None:
             exit_object['variety'] = 'iceberg'
             exit_object['iceberg_quantity'] = int(self.exit_iceberg_quantity.get())
-            exit_object['iceberg_legs'] = int(self.exit_iceberg_lot.get())
+            exit_object['iceberg_legs'] = int(self.exit_iceberg_lot.get()) """
         Button(self.single_order_exit_win, text=btn_text, width=15,
                command=(lambda: self.execute_exit_position(
                    parent_tree_id,
-                   exit_object
+                   {
+            'tradingsymbol': trade_values_array[0],
+                       'exchange': instrument_response[0][11],
+                       'transaction_type': self.exit_transactiontype.get(),
+                       'order_type': self.exit_ordertype.get(),
+                       'quantity': int(float(self.exit_total_quant.get())),
+                       'product': self.exit_producttype.get(),
+                       'price': float(self.exit_price.get()),
+                       'validity': 'DAY',
+                       'variety': 'regular'
+        }
                ))).pack(side=TOP)
 
     def is_exit_iceberg_logic(self):
@@ -1952,6 +1962,10 @@ class CopyTraderGUI(Frame):
     def execute_exit_position(self, account_id, order_object):
         account = ''
         response = ''
+        if self.exit_iceberg_quantity.get() != '' and self.exit_iceberg_quantity.get() != None and int(self.exit_iceberg_quantity.get()) >= 5 and self.exit_iceberg_lot.get() != '' and self.exit_iceberg_lot.get() != None:
+            order_object['variety'] = 'iceberg'
+            order_object['iceberg_quantity'] = int(self.exit_iceberg_quantity.get())
+            order_object['iceberg_legs'] = int(self.exit_iceberg_lot.get())
         print(order_object)
         variety_var = order_object['variety']
         post_order_success = {}
