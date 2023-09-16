@@ -7,6 +7,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium import webdriver
+import chromedriver_autoinstaller
 import time, pyotp
 import logging
 import mintotp
@@ -22,7 +25,7 @@ import struct
 api_key = 'lef83s9j4x3xp940'
 api_secret = 'mamiwvwlx493z8jnm09jb9zk0adnfkjx'
 
-
+chromedriver_autoinstaller.install()
 
 class ZerodhaConnect(threading.Thread):
     def __init__(self,api_key, api_secret, user_id, user_pwd, totp_key):
@@ -133,6 +136,8 @@ class ZerodhaConnectV2():
             options.add_argument("--disable-extensions")
             print(retries)
             
+
+            # driver = webdriver.Chrome(ChromeDriverManager().install(),options=options)
             driver = webdriver.Chrome(options=options)
 
             driver.get(f'https://kite.trade/connect/login?api_key={self.api_key}&v=3')
