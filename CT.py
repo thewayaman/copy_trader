@@ -1,4 +1,11 @@
 import logging
+import os
+logging.basicConfig(
+    filename= os.path.dirname(os.path.realpath(__file__)) + '\copy_trader.log',
+    # filename = 'copy_trader.log',
+    filemode='a',
+    level=logging.INFO,
+    format="[%(asctime)s:%(filename)s:%(lineno)s - %(funcName)20s()] %(message)s")
 from math import ceil
 from tkinter import ttk
 from requests import get
@@ -11,8 +18,8 @@ from tkinter.messagebox import askyesno, showerror, showwarning, showinfo
 from tkinter.filedialog import askopenfilename
 import ast
 import socket
-import struct
-import uuid
+
+import platform
 import random
 import constant
 from openpyxl import load_workbook
@@ -45,12 +52,12 @@ PASSWORD = 'Platinum@10'
 CLIENTLOCALIP = '192.168.1.17'
 CLIENTPUBLICIP = '122.172.83.83'
 MACADDRESS = '16:58:63:8c:33:ce'
-logging.basicConfig(level=logging.INFO,
-                    format='%(process)d-%(levelname)s-%(message)s')
+
 
 class CopyTraderGUI(Frame):
     def __init__(self, parent=NONE, msecs=3000, **args):
         Frame.__init__(self, parent, args)
+        
         self.parent = parent
         self.parent.attributes('-fullscreen', True)
         self.screen_height = parent.winfo_screenheight() - 20
@@ -234,12 +241,16 @@ class CopyTraderGUI(Frame):
         conn = http.client.HTTPSConnection(
             "apiconnect.angelbroking.com")
         # payload = "{\n\"clientcode\":\"CLIENT_ID\",\n\"password\":\"CLIENT_PASSWORD\"\n,\n\"totp\":\"TOTP_CODE\"\n}"
-        payload = {
+        # payload = {
+        #     'clientcode': CLIENT_ID,
+        #     'password': PASSWORD,
+        #     'totp': self.totp.get()
+        # }
+        json_data = json.dumps({
             'clientcode': CLIENT_ID,
             'password': PASSWORD,
             'totp': self.totp.get()
-        }
-        json_data = json.dumps(payload)
+        })
         """ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
         print('My ClientLocalIP:{}',s.getsockname()[0])
@@ -3143,13 +3154,16 @@ class CopyTraderGUI(Frame):
 
 
 if __name__ == '__main__':
-
     root = Tk()
     root.title('Copy Trader 1.0')
     root.iconname('CT')
     # Label(root, text="Copy Trader").pack()
     height = root.winfo_screenheight()
     width = root.winfo_screenwidth()
+    try:
+        CopyTraderGUI(root, bd=3, relief=SUNKEN)
+        root.mainloop()
+    except Exception as e:
+        log = logging.getLogger()
+        log.critical(e)
 
-    CopyTraderGUI(root, bd=3, relief=SUNKEN)
-    root.mainloop()
